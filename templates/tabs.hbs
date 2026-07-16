@@ -1,0 +1,25 @@
+<nav class="rb-tabs">
+    {{#each tabs}}
+    <div class="rb-tab {{#if this.active}}active{{/if}} {{#if this.pinned}}pinned{{/if}}"
+         data-action="selectTab" data-tab-id="{{this.id}}"
+         data-tooltip="{{this.label}}">
+        <i class="{{this.icon}}"></i>
+        {{#unless this.pinned}}<span class="rb-tab-label">{{this.label}}</span>{{/unless}}
+        <a class="rb-tab-pin {{#if this.pinned}}pinned{{/if}}"
+           data-action="togglePin" data-tab-id="{{this.id}}"
+           data-tooltip="{{#if this.pinned}}PF2ERB.Unpin{{else}}PF2ERB.Pin{{/if}}">
+            <i class="fa-solid fa-thumbtack"></i>
+        </a>
+        {{#unless this.pinned}}
+        <a class="rb-tab-close" data-action="closeTab" data-tab-id="{{this.id}}"
+           data-tooltip="PF2ERB.CloseTab">
+            <i class="fa-solid fa-xmark"></i>
+        </a>
+        {{/unless}}
+    </div>
+    {{/each}}
+    <button type="button" class="rb-new-tab" data-action="newTab"
+            data-tooltip="PF2ERB.NewTab">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+</nav>

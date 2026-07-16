@@ -1,0 +1,72 @@
+<aside class="rb-sidebar">
+    {{#if search}}
+        {{#if search.hasNames}}
+        <h3>{{localize "PF2ERB.Results.Titles"}}</h3>
+        <ol class="rb-list">
+            {{#each search.names}}
+            <li>
+                <a data-action="navigate" data-uuid="{{this.uuid}}">
+                    <i class="{{this.icon}}"></i>
+                    <span class="rb-item-name">{{this.name}}</span>
+                    <span class="rb-item-source">{{this.source}}</span>
+                </a>
+            </li>
+            {{/each}}
+        </ol>
+        {{/if}}
+
+        <h3>{{localize "PF2ERB.Results.FullText"}}</h3>
+        {{#if search.building}}
+        <p class="rb-hint">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            {{localize "PF2ERB.BuildingIndex"}}
+        </p>
+        {{else if search.hasTexts}}
+        <ol class="rb-list rb-text-results">
+            {{#each search.texts}}
+            <li>
+                <a data-action="navigate" data-uuid="{{this.uuid}}">
+                    <span class="rb-item-name">{{this.name}}</span>
+                    <span class="rb-snippet">{{this.snippet.before}}<mark>{{this.snippet.match}}</mark>{{this.snippet.after}}</span>
+                </a>
+            </li>
+            {{/each}}
+        </ol>
+        {{else}}
+        <p class="rb-hint">{{localize "PF2ERB.NoTextResults"}}</p>
+        {{/if}}
+
+        {{#if search.empty}}
+        <p class="rb-hint">{{localize "PF2ERB.NoResults"}}</p>
+        {{/if}}
+    {{else}}
+        {{#each sidebar.sections}}
+        <h3>{{#if this.icon}}<i class="{{this.icon}}"></i> {{/if}}{{this.label}}</h3>
+        <ol class="rb-list">
+            {{#each this.items}}
+            <li class="{{#if this.active}}active{{/if}}">
+                <a data-action="navigate"
+                   {{#if this.uuid}}data-uuid="{{this.uuid}}"{{/if}}
+                   {{#if this.pack}}data-pack="{{this.pack}}"{{/if}}
+                   {{#if this.view}}data-view="{{this.view}}"{{/if}}>
+                    {{#if this.icon}}<i class="{{this.icon}}"></i>{{/if}}
+                    <span class="rb-item-name">{{this.name}}</span>
+                </a>
+                {{#if this.folderKey}}
+                <a class="rb-item-folder" data-action="setBookmarkFolder"
+                   data-key="{{this.folderKey}}" data-tooltip="PF2ERB.Folder.Assign">
+                    <i class="fa-solid fa-folder-tree"></i>
+                </a>
+                {{/if}}
+                {{#if this.removeKey}}
+                <a class="rb-item-remove" data-action="removeBookmark"
+                   data-key="{{this.removeKey}}" data-tooltip="PF2ERB.RemoveBookmark">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+                {{/if}}
+            </li>
+            {{/each}}
+        </ol>
+        {{/each}}
+    {{/if}}
+</aside>

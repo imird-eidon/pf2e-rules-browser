@@ -1,0 +1,655 @@
+/* ---------------------------------------------------------------- Layout */
+.pf2e-rules-browser .window-content {
+    display: grid;
+    grid-template:
+        "tabs tabs" auto
+        "toolbar toolbar" auto
+        "sidebar content" 1fr / 280px 1fr;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.pf2e-rules-browser .rb-tabs { grid-area: tabs; }
+.pf2e-rules-browser .rb-toolbar { grid-area: toolbar; }
+.pf2e-rules-browser .rb-sidebar { grid-area: sidebar; }
+.pf2e-rules-browser .rb-content { grid-area: content; }
+
+/* ------------------------------------------------------------- Tab strip */
+.pf2e-rules-browser .rb-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    padding: 0.3rem 0.4rem 0;
+    border-bottom: 1px solid var(--color-border, rgb(0 0 0 / 25%));
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.pf2e-rules-browser .rb-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 12rem;
+    min-width: 0;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--color-border, rgb(0 0 0 / 25%));
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    opacity: 0.65;
+    user-select: none;
+}
+
+.pf2e-rules-browser .rb-tab:hover { opacity: 0.9; }
+
+.pf2e-rules-browser .rb-tab.active {
+    opacity: 1;
+    background: rgb(128 128 128 / 15%);
+    font-weight: bold;
+}
+
+.pf2e-rules-browser .rb-tab.pinned {
+    max-width: 3.6rem;
+    min-width: 3.6rem;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.25rem 0.35rem;
+}
+
+.pf2e-rules-browser .rb-tab > i {
+    flex: 0 0 auto;
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+.pf2e-rules-browser .rb-tab-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-13, 0.8125rem);
+}
+
+.pf2e-rules-browser .rb-tab-pin {
+    flex: 0 0 auto;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    opacity: 0.6;
+    transform: rotate(45deg);
+}
+
+/* Unpinned tabs: reveal the pin toggle on hover only (it would be clutter
+   otherwise, since these tabs already show a close button). */
+.pf2e-rules-browser .rb-tab:not(.pinned):hover .rb-tab-pin {
+    display: inline-flex;
+}
+
+/* Pinned tabs: the pin sits inline next to the icon, always visible, at a
+   fixed spot — no hover-triggered jump, no overlap with the icon used to
+   select the tab. This is what made pinned tabs hard to click before. */
+.pf2e-rules-browser .rb-tab.pinned .rb-tab-pin {
+    display: inline-flex;
+    transform: rotate(0deg);
+    color: #d4a017;
+    opacity: 0.85;
+}
+
+.pf2e-rules-browser .rb-tab-pin:hover {
+    opacity: 1;
+    background: rgb(128 128 128 / 30%);
+}
+
+.pf2e-rules-browser .rb-tab-close {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    opacity: 0.6;
+}
+
+.pf2e-rules-browser .rb-tab-close:hover {
+    opacity: 1;
+    background: rgb(128 128 128 / 30%);
+}
+
+.pf2e-rules-browser .rb-new-tab {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+}
+
+/* --------------------------------------------------------------- Toolbar */
+.pf2e-rules-browser .rb-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--color-border, rgb(0 0 0 / 25%));
+}
+
+.pf2e-rules-browser .rb-toolbar > button {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    line-height: 1;
+}
+
+.pf2e-rules-browser .rb-toolbar > button[disabled] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pf2e-rules-browser .rb-toolbar > button.rb-bookmark.active i {
+    color: #d4a017;
+}
+
+.pf2e-rules-browser .rb-search-box {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.pf2e-rules-browser .rb-search-box > i {
+    position: absolute;
+    left: 0.6rem;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.pf2e-rules-browser .rb-search-box input.rb-search {
+    width: 100%;
+    height: 2rem;
+    padding-left: 1.9rem;
+    padding-right: 1.9rem;
+}
+
+.pf2e-rules-browser .rb-search-box .rb-clear {
+    position: absolute;
+    right: 0.25rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* --------------------------------------------------------------- Sidebar */
+.pf2e-rules-browser .rb-sidebar {
+    overflow-y: auto;
+    padding: 0.5rem;
+    border-right: 1px solid var(--color-border, rgb(0 0 0 / 25%));
+}
+
+.pf2e-rules-browser .rb-sidebar h3 {
+    font-size: var(--font-size-13, 0.8125rem);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.75;
+    border-bottom: 1px solid var(--color-border, rgb(0 0 0 / 20%));
+    margin: 0.6rem 0 0.3rem;
+    padding-bottom: 0.15rem;
+}
+
+.pf2e-rules-browser .rb-sidebar h3 i {
+    font-size: 0.85em;
+    opacity: 0.8;
+    margin-right: 0.15rem;
+}
+
+.pf2e-rules-browser .rb-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pf2e-rules-browser .rb-list li {
+    display: flex;
+    align-items: center;
+}
+
+.pf2e-rules-browser .rb-list li > a[data-action="navigate"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1.25;
+}
+
+.pf2e-rules-browser .rb-list li > a[data-action="navigate"]:hover {
+    background: rgb(128 128 128 / 15%);
+    text-shadow: none;
+}
+
+.pf2e-rules-browser .rb-list li.active > a[data-action="navigate"] {
+    background: rgb(128 128 128 / 25%);
+    font-weight: bold;
+}
+
+.pf2e-rules-browser .rb-item-remove,
+.pf2e-rules-browser .rb-item-folder {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 50%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pf2e-rules-browser .rb-list li:hover .rb-item-remove,
+.pf2e-rules-browser .rb-list li:hover .rb-item-folder {
+    opacity: 0.6;
+}
+
+.pf2e-rules-browser .rb-item-remove:hover,
+.pf2e-rules-browser .rb-item-folder:hover {
+    opacity: 1 !important;
+    background: rgb(128 128 128 / 30%);
+}
+
+.pf2e-rules-browser .rb-list i {
+    flex: 0 0 1rem;
+    text-align: center;
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.pf2e-rules-browser .rb-item-name { flex: 1 1 auto; }
+
+.pf2e-rules-browser .rb-item-source {
+    flex: 1 0 100%;
+    font-size: var(--font-size-11, 0.6875rem);
+    opacity: 0.6;
+    padding-left: 1.35rem;
+}
+
+.pf2e-rules-browser .rb-snippet {
+    flex: 1 0 100%;
+    font-size: var(--font-size-12, 0.75rem);
+    opacity: 0.75;
+}
+
+.pf2e-rules-browser .rb-snippet mark {
+    background: rgb(255 200 0 / 45%);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+.pf2e-rules-browser .rb-hint {
+    opacity: 0.7;
+    font-style: italic;
+    padding: 0.25rem 0.4rem;
+}
+
+.pf2e-rules-browser .rb-error { color: var(--color-level-error, #c0392b); }
+
+/* --------------------------------------------------------------- Content */
+.pf2e-rules-browser .rb-content {
+    overflow-y: auto;
+    padding: 1rem 1.5rem 2rem;
+    background: rgb(255 255 255 / 2%);
+}
+
+.pf2e-rules-browser .rb-welcome {
+    max-width: 34rem;
+    margin: 3rem auto;
+    text-align: center;
+    opacity: 0.85;
+}
+
+.pf2e-rules-browser .rb-welcome > i {
+    font-size: 3rem;
+    opacity: 0.35;
+    margin-bottom: 0.75rem;
+}
+
+.pf2e-rules-browser .rb-doc-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border-bottom: 2px solid var(--color-border, rgb(0 0 0 / 30%));
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.pf2e-rules-browser .rb-doc-img {
+    flex: 0 0 3rem;
+    width: 3rem;
+    height: 3rem;
+    object-fit: contain;
+    border: none;
+}
+
+.pf2e-rules-browser .rb-doc-titles {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.pf2e-rules-browser .rb-doc-titles h1 {
+    margin: 0;
+    border: none;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.pf2e-rules-browser .rb-level {
+    font-size: 0.6em;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.pf2e-rules-browser .rb-crumb {
+    font-size: var(--font-size-12, 0.75rem);
+    opacity: 0.75;
+    cursor: pointer;
+}
+
+.pf2e-rules-browser .rb-meta {
+    font-size: var(--font-size-12, 0.75rem);
+    opacity: 0.7;
+}
+
+.pf2e-rules-browser .rb-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+}
+
+.pf2e-rules-browser .rb-trait {
+    background: var(--color-pf-primary, #5e0000);
+    color: #fff;
+    border: 1px solid rgb(0 0 0 / 40%);
+    padding: 0.05rem 0.35rem;
+    font-size: var(--font-size-11, 0.6875rem);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.pf2e-rules-browser .rb-trait.rarity { background: #98513d; }
+
+.pf2e-rules-browser .rb-doc-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.pf2e-rules-browser .rb-doc-actions button {
+    width: 2rem;
+    height: 2rem;
+    line-height: 1;
+}
+
+/* ---------------------------------------------------- Shared chat card */
+.chat-message .pf2erb-share header {
+    font-size: var(--font-size-11, 0.6875rem);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    border: none;
+    margin-bottom: 0.25rem;
+}
+
+.chat-message .pf2erb-share p {
+    margin: 0.25rem 0;
+}
+
+.chat-message .pf2erb-share .pf2erb-open-link {
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
+.pf2e-rules-browser .rb-toc {
+    columns: 2;
+    column-gap: 2rem;
+    padding-left: 1.25rem;
+}
+
+.pf2e-rules-browser .rb-toc a { cursor: pointer; }
+
+.pf2e-rules-browser .rb-doc-body {
+    line-height: 1.6;
+    color: var(--color-light-3, #d8d0c5);
+}
+
+.pf2e-rules-browser .rb-doc-body img { max-width: 100%; }
+
+/* Headings: quieter than the giant doc title, with a soft accent rule */
+.pf2e-rules-browser .rb-doc-body h1,
+.pf2e-rules-browser .rb-doc-body h2,
+.pf2e-rules-browser .rb-doc-body h3,
+.pf2e-rules-browser .rb-doc-body h4 {
+    color: var(--color-light-1, #f0e6d2);
+    border-bottom: 1px solid rgb(255 255 255 / 12%);
+    padding-bottom: 0.2rem;
+    margin: 1.4rem 0 0.6rem;
+}
+
+.pf2e-rules-browser .rb-doc-body h1 { font-size: 1.4rem; }
+.pf2e-rules-browser .rb-doc-body h2 { font-size: 1.2rem; }
+.pf2e-rules-browser .rb-doc-body h3 {
+    font-size: 1.05rem;
+    border-bottom: none;
+    color: #d8a86a;
+}
+
+.pf2e-rules-browser .rb-doc-body p { margin: 0.5rem 0; }
+
+.pf2e-rules-browser .rb-doc-body hr {
+    border: none;
+    border-top: 1px solid rgb(255 255 255 / 12%);
+    margin: 0.75rem 0;
+}
+
+/* Content links (spells, feats, conditions...) read as soft pills, not raw text */
+.pf2e-rules-browser .rb-doc-body a.content-link,
+.pf2e-rules-browser .rb-doc-body a.inline-roll {
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 15%);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    color: #e8c98a;
+    text-shadow: none;
+    white-space: nowrap;
+}
+
+.pf2e-rules-browser .rb-doc-body a.content-link:hover,
+.pf2e-rules-browser .rb-doc-body a.inline-roll:hover {
+    background: rgb(255 255 255 / 16%);
+    color: #f5dca0;
+}
+
+.pf2e-rules-browser .rb-doc-body a.content-link i { margin-right: 0.2rem; }
+
+.pf2e-rules-browser .rb-doc-body blockquote {
+    background: rgb(255 255 255 / 5%);
+    border-left: 3px solid var(--color-pf-primary, #8a1f1f);
+    margin: 0.6rem 0;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0 4px 4px 0;
+}
+
+.pf2e-rules-browser .rb-doc-body code {
+    background: rgb(255 255 255 / 8%);
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+}
+
+/* Tables: PF2e/core journal CSS ships a light "parchment" table style (cream
+   rows, dark green header) meant for a light theme. It clashes hard against
+   this window's dark background, so it's overridden here to a quieter,
+   theme-matching look. */
+.pf2e-rules-browser .rb-doc-body table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    margin: 0.75rem 0;
+}
+
+/* Safety net: JS (rules-browser.js #fixContentContrast) repaints every real
+   element's computed background/text color, but it can never reach ::before
+   / ::after pseudo-elements. If the source uses one of those to paint a
+   "paper" backdrop behind a table, this neutralizes it. */
+.pf2e-rules-browser .rb-doc-body *::before,
+.pf2e-rules-browser .rb-doc-body *::after {
+    background: transparent !important;
+    background-image: none !important;
+}
+
+.pf2e-rules-browser .rb-doc-body table thead th {
+    background: rgb(120 40 40 / 55%) !important;
+    background-image: none !important;
+    color: #f0dcc4 !important;
+    font-weight: 600;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border: none !important;
+    border-bottom: 1px solid rgb(255 255 255 / 15%) !important;
+}
+
+.pf2e-rules-browser .rb-doc-body table td,
+.pf2e-rules-browser .rb-doc-body table th {
+    padding: 0.35rem 0.6rem;
+    border: none !important;
+    border-bottom: 1px solid rgb(255 255 255 / 8%) !important;
+    background: transparent !important;
+    color: inherit !important;
+}
+
+.pf2e-rules-browser .rb-doc-body table tbody tr:nth-child(even) td {
+    background: rgb(255 255 255 / 3%) !important;
+}
+
+.pf2e-rules-browser .rb-doc-body table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.pf2e-rules-browser .rb-figure {
+    margin: 0;
+    text-align: center;
+}
+
+.pf2e-rules-browser .rb-figure img { max-width: 100%; }
+
+/* ------------------------------------------------- Journal directory button */
+#journal button.pf2erb-open,
+.journal-sidebar button.pf2erb-open {
+    flex: 0 0 auto;
+}
+
+/* -------------------------------------------------- Command palette (Ctrl+K) */
+/* Appended directly to document.body (not to the app's own element) so a
+   Handlebars re-render of the window's parts can never remove it mid-search. */
+.rb-palette-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: rgb(0 0 0 / 45%);
+    display: flex;
+    justify-content: center;
+    padding-top: 12vh;
+}
+
+.rb-palette {
+    width: min(560px, 90vw);
+    max-height: 60vh;
+    background: #1c1714;
+    border: 1px solid rgb(255 255 255 / 15%);
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgb(0 0 0 / 50%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.rb-palette-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid rgb(255 255 255 / 12%);
+}
+
+.rb-palette-input-row > i {
+    opacity: 0.6;
+    color: #d4a017;
+}
+
+.rb-palette-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: #e8ddd0;
+    font-size: 1rem;
+}
+
+.rb-palette-results {
+    list-style: none;
+    margin: 0;
+    padding: 0.3rem;
+    overflow-y: auto;
+}
+
+.rb-palette-results li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #d8d0c5;
+}
+
+.rb-palette-results li i:first-child {
+    flex: 0 0 auto;
+    width: 1rem;
+    text-align: center;
+    opacity: 0.7;
+}
+
+.rb-palette-results li .rb-item-name { flex: 1; }
+
+.rb-palette-results li .rb-item-source {
+    font-size: var(--font-size-11, 0.6875rem);
+    opacity: 0.55;
+}
+
+.rb-palette-results li.active,
+.rb-palette-results li:hover {
+    background: rgb(212 160 23 / 18%);
+}
+
+.rb-palette-results li.rb-hint {
+    opacity: 0.6;
+    font-style: italic;
+    cursor: default;
+}
+
+.rb-palette-results li.rb-hint:hover { background: none; }

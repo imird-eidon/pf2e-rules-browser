@@ -1,0 +1,88 @@
+<section class="rb-content">
+    {{#if content.welcome}}
+    <div class="rb-welcome">
+        <i class="fa-solid fa-book-open-reader"></i>
+        <h2>{{localize "PF2ERB.Title"}}</h2>
+        <p>{{localize "PF2ERB.Welcome.Line1"}}</p>
+        <p>{{localize "PF2ERB.Welcome.Line2"}}</p>
+    </div>
+    {{/if}}
+
+    {{#if content.error}}
+    <p class="rb-hint rb-error"><i class="fa-solid fa-triangle-exclamation"></i> {{content.error}}</p>
+    {{/if}}
+
+    {{#if content.listing}}
+    <header class="rb-doc-header">
+        <div class="rb-doc-titles">
+            <h1>{{content.listing.title}}</h1>
+            <span class="rb-meta">{{content.listing.meta}}</span>
+        </div>
+    </header>
+    <p class="rb-hint">{{localize "PF2ERB.PickFromSidebar"}}</p>
+    {{/if}}
+
+    {{#if content.header}}
+    <header class="rb-doc-header">
+        {{#if content.header.img}}
+        <img class="rb-doc-img" src="{{content.header.img}}" alt="">
+        {{/if}}
+        <div class="rb-doc-titles">
+            {{#if content.header.crumb}}
+            <a class="rb-crumb" data-action="navigate" data-uuid="{{content.header.crumb.uuid}}">
+                <i class="fa-solid fa-book"></i> {{content.header.crumb.name}}
+            </a>
+            {{/if}}
+            <h1>
+                {{content.header.title}}
+                {{#if content.header.level}}<span class="rb-level">{{content.header.level}}</span>{{/if}}
+            </h1>
+            {{#if content.header.subtitle}}<span class="rb-meta">{{content.header.subtitle}}</span>{{/if}}
+            {{#if content.header.traits.length}}
+            <div class="rb-traits">
+                {{#if content.header.rarity}}<span class="rb-trait rarity">{{content.header.rarity}}</span>{{/if}}
+                {{#each content.header.traits}}<span class="rb-trait">{{this}}</span>{{/each}}
+            </div>
+            {{/if}}
+            {{#if content.header.source}}<span class="rb-meta rb-source">{{content.header.source}}</span>{{/if}}
+        </div>
+        {{#if content.sheetUuid}}
+        <div class="rb-doc-actions">
+            <button type="button" data-action="share"
+                    data-uuid="{{content.sheetUuid}}" data-tooltip="PF2ERB.Share">
+                <i class="fa-solid fa-share-nodes"></i>
+            </button>
+            <button type="button" data-action="openSheet"
+                    data-uuid="{{content.sheetUuid}}" data-tooltip="PF2ERB.OpenSheet">
+                <i class="fa-solid fa-up-right-from-square"></i>
+            </button>
+        </div>
+        {{/if}}
+    </header>
+    {{/if}}
+
+    {{#if content.pagesToc}}
+    <ol class="rb-toc">
+        {{#each content.pagesToc}}
+        <li><a data-action="navigate" data-uuid="{{this.uuid}}">{{this.name}}</a></li>
+        {{/each}}
+    </ol>
+    {{/if}}
+
+    {{#if content.html}}
+    <article class="journal-entry-page text">
+        <section class="rb-doc-body journal-page-content">{{{content.html}}}</section>
+    </article>
+    {{/if}}
+
+    {{#if content.image}}
+    <figure class="rb-figure">
+        <img src="{{content.image.src}}" alt="{{content.image.caption}}">
+        {{#if content.image.caption}}<figcaption>{{content.image.caption}}</figcaption>{{/if}}
+    </figure>
+    {{/if}}
+
+    {{#if content.unsupported}}
+    <p class="rb-hint">{{localize "PF2ERB.Unsupported"}}</p>
+    {{/if}}
+</section>

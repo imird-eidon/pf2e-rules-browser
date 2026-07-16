@@ -1,0 +1,50 @@
+{
+  "id": "pf2e-rules-browser",
+  "title": "PF2e Rules Browser",
+  "description": "An internal, browser-like reader for all rules content available in your Foundry world: tabbed single-window navigation with per-tab history, link interception (no more window cascades) and a lightweight full-text search across journal compendia.",
+  "version": "0.4.2",
+  "authors": [
+    {
+      "name": "Álvaro",
+      "url": "https://github.com/TU-USUARIO-GITHUB"
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/module.js"
+  ],
+  "styles": [
+    "styles/rules-browser.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "es",
+      "name": "Español",
+      "path": "lang/es.json"
+    }
+  ],
+  "url": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser",
+  "readme": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser/blob/main/README.md",
+  "bugs": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser/issues",
+  "changelog": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser/blob/main/CHANGELOG.md",
+  "license": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser/blob/main/LICENSE",
+  "manifest": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser/releases/latest/download/module.json",
+  "download": "https://github.com/TU-USUARIO-GITHUB/pf2e-rules-browser/releases/download/0.4.2/module.zip"
+}
