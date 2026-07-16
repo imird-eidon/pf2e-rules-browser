@@ -4,6 +4,10 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+<img width="272" height="234" alt="image" src="https://github.com/user-attachments/assets/a34c319d-617d-4969-a134-4fa8e8fd418d" />
+
+<img width="809" height="555" alt="image" src="https://github.com/user-attachments/assets/12459403-90ad-4830-931c-6b818c0fdbf6" />
+
 <img width="842" height="613" alt="image" src="https://github.com/user-attachments/assets/6974c357-d317-4e23-a1e8-fa8f6437bc6b" />
 
 
