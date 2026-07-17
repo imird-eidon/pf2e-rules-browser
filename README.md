@@ -4,6 +4,15 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Features (v0.4.8)
+
+- **Collapsible sidebar sections.** Click any section header on Home (Bookmarks, folders, Recently viewed, Compendia, World) to fold it away — handy once you've built up a decent list of bookmarks. Each section shows its item count next to the chevron, and the collapsed/expanded state is remembered per user.
+- **Bookmarks now lead the Home sidebar**, above Recently viewed, since they're the ones a GM curates on purpose.
+
+## Bugfix (v0.4.7)
+
+- Fixed middle-click not opening anything at all in some browsers — content-links and tabs have no real `href`, so a middle-click could be swallowed by the browser's autoscroll instead of firing a click. Now suppressed on mousedown so the click always goes through.
+
 ## Bugfix (v0.4.6)
 
 - Fixed middle-clicking a content-link that came from a compendium (e.g. a feat) opening the whole compendium's listing in a new tab instead of that specific document — real Foundry content-links often carry both `data-uuid` and `data-pack` at once, and the descriptor resolver now always prefers the specific document over the pack listing.

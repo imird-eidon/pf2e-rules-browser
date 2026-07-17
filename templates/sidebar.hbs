@@ -44,7 +44,16 @@
         {{/if}}
     {{else}}
         {{#each sidebar.sections}}
+        {{#if this.key}}
+        <h3 class="rb-section-toggle" data-action="toggleSection" data-section-key="{{this.key}}">
+            <i class="fa-solid fa-chevron-{{#if this.collapsed}}right{{else}}down{{/if}} rb-chevron"></i>
+            {{#if this.icon}}<i class="{{this.icon}}"></i> {{/if}}{{this.label}}
+            <span class="rb-section-count">{{this.items.length}}</span>
+        </h3>
+        {{else}}
         <h3>{{#if this.icon}}<i class="{{this.icon}}"></i> {{/if}}{{this.label}}</h3>
+        {{/if}}
+        {{#unless this.collapsed}}
         <ol class="rb-list">
             {{#each this.items}}
             <li class="{{#if this.active}}active{{/if}}">
@@ -70,6 +79,7 @@
             </li>
             {{/each}}
         </ol>
+        {{/unless}}
         {{/each}}
     {{/if}}
 </aside>

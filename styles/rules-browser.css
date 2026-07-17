@@ -217,6 +217,36 @@
     margin-right: 0.15rem;
 }
 
+.pf2e-rules-browser .rb-section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.05rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.pf2e-rules-browser .rb-section-toggle:hover {
+    opacity: 1;
+}
+
+.pf2e-rules-browser .rb-chevron {
+    flex: 0 0 auto;
+    width: 0.9rem;
+    font-size: 0.7em !important;
+    opacity: 0.6;
+    margin-right: 0.3rem !important;
+}
+
+.pf2e-rules-browser .rb-section-count {
+    margin-left: auto;
+    font-size: var(--font-size-11, 0.6875rem);
+    opacity: 0.6;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    padding-left: 0.4rem;
+}
+
 .pf2e-rules-browser .rb-list {
     list-style: none;
     margin: 0;

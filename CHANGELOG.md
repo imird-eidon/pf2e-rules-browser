@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.8
+
+- Sidebar sections (Bookmarks, folders, Recently viewed, Compendia, World) are now collapsible — click a section header to fold it away. Collapsed state is remembered per user.
+- Reordered the Home sidebar: Bookmarks (and their folders) now appear first, above Recently viewed.
+
+## 0.4.7
+
+- Fixed middle-click not opening anything at all in some browsers. Content-links and tabs have no real `href`, so a middle-click could be swallowed by the browser's autoscroll instead of firing a click — now suppressed on mousedown so the click goes through.
+
 ## 0.4.6
 
 - Fixed a bug where middle-clicking a content-link that came from a compendium (e.g. a feat) could open the whole compendium's listing in a new tab instead of that specific document. Real Foundry content-links often carry both `data-uuid` and `data-pack` at once; the descriptor resolver now always prefers the specific document.

@@ -119,6 +119,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       removeBookmark: RulesBrowser.#onRemoveBookmark,
       setBookmarkFolder: RulesBrowser.#onSetBookmarkFolder,
       togglePin: RulesBrowser.#onTogglePin,
+      toggleSection: RulesBrowser.#onToggleSection,
       openPalette: RulesBrowser.#onOpenPalette
     }
   };
@@ -557,6 +558,26 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /* -------------------------------------------- */
+  /*  Collapsible sidebar sections (per user)     */
+  /* -------------------------------------------- */
+
+  /** @returns {Set<string>} keys of currently-collapsed sections */
+  getCollapsedSections() {
+    return new Set(game.user.getFlag(MODULE_ID, "collapsedSections") ?? []);
+  }
+
+  static async #onToggleSection(event, target) {
+    event.stopPropagation();
+    const key = target.dataset.sectionKey;
+    if (!key) return;
+    const collapsed = this.getCollapsedSections();
+    if (collapsed.has(key)) collapsed.delete(key);
+    else collapsed.add(key);
+    await game.user.setFlag(MODULE_ID, "collapsedSections", [...collapsed]);
+    await this.render({ parts: ["sidebar"] });
+  }
+
+  /* -------------------------------------------- */
   /*  Session persistence (per user)              */
   /* -------------------------------------------- */
 
@@ -724,6 +745,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async #prepareHome(context, tab) {
+    const collapsed = this.getCollapsedSections();
     const packItems = this.index.journalPacks().map((p) => ({
       name: p.title,
       pack: p.collection,
@@ -731,8 +753,42 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     }));
 
     const sections = [
-      { label: game.i18n.localize("PF2ERB.Compendia"), items: packItems }
+      {
+        key: "compendia",
+        label: game.i18n.localize("PF2ERB.Compendia"),
+        items: packItems,
+        collapsed: collapsed.has("compendia")
+      }
     ];
+
+    if (game.settings.get(MODULE_ID, "includeWorldJournals")) {
+      sections.push({
+        key: "world",
+        label: game.i18n.localize("PF2ERB.World"),
+        items: [
+          {
+            name: game.i18n.localize("PF2ERB.WorldJournals"),
+            view: "world",
+            icon: "fa-solid fa-globe"
+          }
+        ],
+        collapsed: collapsed.has("world")
+      });
+    }
+
+    // Built in *reverse* display order and unshifted in that order, since
+    // the last unshift ends up frontmost: Recent goes on first (lands right
+    // after Bookmarks), then Bookmarks goes on last (lands at the very
+    // front) — matching the requested "bookmarks first of all" order.
+    const recents = this.getRecentsForDisplay();
+    if (recents.length) {
+      sections.unshift({
+        key: "recent",
+        label: game.i18n.localize("PF2ERB.Recent"),
+        items: recents.map((r) => ({ name: r.label, icon: r.icon, uuid: r.uuid })),
+        collapsed: collapsed.has("recent")
+      });
+    }
 
     const bookmarks = this.getBookmarks();
     if (bookmarks.length) {
@@ -745,45 +801,29 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         folderKey: b.key
       });
 
-      // Built in display order (general bookmarks, then each folder), then
-      // unshifted as a batch so that order is preserved at the front of the
-      // sidebar. A folder only exists while at least one bookmark uses it.
+      // General bookmarks first, then each folder — built in display order,
+      // then unshifted as a single batch so that order is preserved.
       const bookmarkSections = [];
       const general = bookmarks.filter((b) => !b.folder);
       if (general.length) {
         bookmarkSections.push({
+          key: "bookmarks",
           label: game.i18n.localize("PF2ERB.Bookmarks"),
-          items: general.map(toItem)
+          items: general.map(toItem),
+          collapsed: collapsed.has("bookmarks")
         });
       }
       for (const folder of this.getBookmarkFolders()) {
+        const key = `folder:${folder}`;
         bookmarkSections.push({
+          key,
           label: folder,
           icon: "fa-solid fa-folder",
-          items: bookmarks.filter((b) => b.folder === folder).map(toItem)
+          items: bookmarks.filter((b) => b.folder === folder).map(toItem),
+          collapsed: collapsed.has(key)
         });
       }
       sections.unshift(...bookmarkSections);
-    }
-
-    const recents = this.getRecentsForDisplay();
-    if (recents.length) {
-      sections.unshift({
-        label: game.i18n.localize("PF2ERB.Recent"),
-        items: recents.map((r) => ({ name: r.label, icon: r.icon, uuid: r.uuid }))
-      });
-    }
-    if (game.settings.get(MODULE_ID, "includeWorldJournals")) {
-      sections.push({
-        label: game.i18n.localize("PF2ERB.World"),
-        items: [
-          {
-            name: game.i18n.localize("PF2ERB.WorldJournals"),
-            view: "world",
-            icon: "fa-solid fa-globe"
-          }
-        ]
-      });
     }
 
     context.sidebar = { sections };
@@ -982,7 +1022,20 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       true
     );
 
-    // 2) Middle-click: open links in a background tab / close tabs.
+    // 2) Middle-click's default behavior in most browsers, when the target
+    //    has no real `href` (true of every Foundry content-link — they
+    //    navigate via JS, not real anchors), is to start "autoscroll" mode
+    //    instead of firing a click at all. Suppressing that on mousedown is
+    //    the standard fix, so the auxclick handler below actually gets a
+    //    chance to run.
+    this.element.addEventListener("mousedown", (event) => {
+      if (event.button !== 1) return;
+      if (event.target.closest("a.content-link, [data-action='navigate'], .rb-tab")) {
+        event.preventDefault();
+      }
+    });
+
+    // 3) Middle-click: open links in a background tab / close tabs.
     this.element.addEventListener(
       "auxclick",
       (event) => {
@@ -1005,7 +1058,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       true
     );
 
-    // 2b) Drag-and-drop tab reordering. Delegated on the app element so it
+    // 3b) Drag-and-drop tab reordering. Delegated on the app element so it
     // survives tab-strip re-renders without needing to be re-attached.
     this.element.addEventListener("dragstart", (event) => {
       const tabEl = event.target.closest(".rb-tab");
@@ -1043,14 +1096,14 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (draggedId) this.reorderTab(draggedId, tabEl.dataset.tabId);
     });
 
-    // 3) Delegated search input (survives partial re-renders of the sidebar).
+    // 4) Delegated search input (survives partial re-renders of the sidebar).
     this.element.addEventListener("input", (event) => {
       const input = event.target.closest("input.rb-search");
       if (!input) return;
       this.#debouncedSearch(input.value);
     });
 
-    // 4) Enter in the search box opens the first result.
+    // 5) Enter in the search box opens the first result.
     this.element.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       if (!event.target.closest("input.rb-search")) return;
