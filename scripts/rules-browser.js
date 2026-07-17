@@ -837,8 +837,16 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
       .map((j) => ({ name: j.name, uuid: j.uuid, icon: "fa-solid fa-book" }));
 
+    const key = "world-journals";
     context.sidebar = {
-      sections: [{ label: game.i18n.localize("PF2ERB.WorldJournals"), items }]
+      sections: [
+        {
+          key,
+          label: game.i18n.localize("PF2ERB.WorldJournals"),
+          items,
+          collapsed: this.getCollapsedSections().has(key)
+        }
+      ]
     };
     tab.lastSidebar = context.sidebar;
     context.content = {
@@ -857,7 +865,15 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
       .map((e) => ({ name: e.name, uuid: e.uuid, icon: "fa-solid fa-book" }));
 
-    context.sidebar = { sections: [{ label: pack.title, items }] };
+    // Same key namespace ("pack:<id>") used when landing directly on an item
+    // from that pack (see #prepareItem), so collapsing one keeps the other
+    // consistent.
+    const key = `pack:${packId}`;
+    context.sidebar = {
+      sections: [
+        { key, label: pack.title, items, collapsed: this.getCollapsedSections().has(key) }
+      ]
+    };
     tab.lastSidebar = context.sidebar;
     context.content = {
       listing: {
@@ -901,7 +917,12 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         active: p.uuid === activePageUuid,
         level: p.title?.level ?? 1
       }));
-    return { sections: [{ label: journal.name, items }] };
+    const key = `journal:${journal.uuid}`;
+    return {
+      sections: [
+        { key, label: journal.name, items, collapsed: this.getCollapsedSections().has(key) }
+      ]
+    };
   }
 
   async #prepareJournalEntry(context, tab, journal) {
@@ -949,7 +970,31 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async #prepareItem(context, tab, item) {
-    // Keep whatever contextual sidebar we had (pack listing, journal pages...).
+    // Keep whatever contextual sidebar we had (pack listing, journal
+    // pages...). If there isn't one — e.g. a background tab opened directly
+    // to this item via middle-click, a bookmark, the command palette, or
+    // "recently viewed", never having "visited" its containing pack — build
+    // one from the item's own compendium pack instead of leaving it empty.
+    if (item.pack) {
+      const key = `pack:${item.pack}`;
+      const pack = game.packs.get(item.pack);
+      if (pack) {
+        const index = await pack.getIndex();
+        const items = [...index]
+          .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
+          .map((e) => ({
+            name: e.name,
+            uuid: e.uuid,
+            icon: "fa-solid fa-book",
+            active: e.uuid === item.uuid
+          }));
+        tab.lastSidebar = {
+          sections: [
+            { key, label: pack.title, items, collapsed: this.getCollapsedSections().has(key) }
+          ]
+        };
+      }
+    }
     context.sidebar = tab.lastSidebar ?? { sections: [] };
 
     const sys = item.system ?? {};

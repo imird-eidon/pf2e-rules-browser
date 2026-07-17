@@ -4,6 +4,11 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Bugfix (v0.4.9)
+
+- Fixed a blank sidebar when opening an item (feat, spell, etc.) in a tab that never "visited" its containing compendium first — this happened with middle-click, bookmarks, the command palette, and "recently viewed". The item's own compendium listing is now rebuilt on the fly, with the current item highlighted.
+- Collapsible sections are no longer Home-only: pack listings, world journal listings, and a journal's own page list can now be folded too (and remember their state per user), so folding doesn't seem to "stop working" the moment you leave Home.
+
 ## Features (v0.4.8)
 
 - **Collapsible sidebar sections.** Click any section header on Home (Bookmarks, folders, Recently viewed, Compendia, World) to fold it away — handy once you've built up a decent list of bookmarks. Each section shows its item count next to the chevron, and the collapsed/expanded state is remembered per user.

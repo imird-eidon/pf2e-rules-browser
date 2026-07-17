@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.9
+
+- Fixed a blank sidebar when opening an item (feat, spell, etc.) in a tab that never "visited" its containing compendium first — happened with middle-click, bookmarks, the command palette, and "recently viewed". The item's own compendium listing is now rebuilt on the fly, with the current item highlighted.
+- Collapsible sections are no longer Home-only: pack listings, world journal listings, and a journal's own page list can now be folded too, and remember their state per user.
+
 ## 0.4.8
 
 - Sidebar sections (Bookmarks, folders, Recently viewed, Compendia, World) are now collapsible — click a section header to fold it away. Collapsed state is remembered per user.
