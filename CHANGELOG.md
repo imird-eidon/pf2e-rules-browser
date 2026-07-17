@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.5
+
+- Drag-and-drop tab reordering. Pinning a tab still jumps it to the front by default, but any tab can be freely dragged anywhere afterward.
+- Performance: the name search index is now warmed up in the background as soon as Foundry finishes loading, instead of on first use.
+- The full-text index build now shows a real progress bar (based on the number of journal packs processed) instead of a generic spinner.
+
 ## 0.4.2
 
 - Default keybinding for opening the browser changed to `Ctrl+S`.

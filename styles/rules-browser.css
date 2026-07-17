@@ -49,6 +49,14 @@
     font-weight: bold;
 }
 
+.pf2e-rules-browser .rb-tab.dragging {
+    opacity: 0.35;
+}
+
+.pf2e-rules-browser .rb-tab.drag-over {
+    box-shadow: inset 2px 0 0 #d4a017;
+}
+
 .pf2e-rules-browser .rb-tab.pinned {
     max-width: 3.6rem;
     min-width: 3.6rem;
@@ -300,6 +308,20 @@
     opacity: 0.7;
     font-style: italic;
     padding: 0.25rem 0.4rem;
+}
+
+.pf2e-rules-browser .rb-progress {
+    height: 4px;
+    background: rgb(255 255 255 / 10%);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0.3rem 0.4rem 0;
+}
+
+.pf2e-rules-browser .rb-progress-bar {
+    height: 100%;
+    background: #d4a017;
+    transition: width 0.2s ease;
 }
 
 .pf2e-rules-browser .rb-error { color: var(--color-level-error, #c0392b); }

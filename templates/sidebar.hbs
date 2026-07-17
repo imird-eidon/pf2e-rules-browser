@@ -17,9 +17,12 @@
 
         <h3>{{localize "PF2ERB.Results.FullText"}}</h3>
         {{#if search.building}}
+        <div class="rb-progress">
+            <div class="rb-progress-bar" style="width: {{search.progress}}%"></div>
+        </div>
         <p class="rb-hint">
             <i class="fa-solid fa-spinner fa-spin"></i>
-            {{localize "PF2ERB.BuildingIndex"}}
+            {{localize "PF2ERB.BuildingIndex"}} ({{search.progress}}%)
         </p>
         {{else if search.hasTexts}}
         <ol class="rb-list rb-text-results">

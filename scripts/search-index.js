@@ -162,14 +162,19 @@ export class SearchIndex {
 
   /**
    * Kick off (or reuse) the lazy full-text build.
+   * @param {(step: number, total: number) => void} [onProgress] - called
+   *   after each journal pack (and the world-journals batch, if included)
+   *   finishes loading. Only the caller of the *first* build gets progress
+   *   ticks — later callers while a build is already in flight share the
+   *   same promise without a callback attached.
    * @returns {Promise<void>}
    */
-  buildTextIndex() {
-    this.#textBuildPromise ??= this.#buildTextIndex();
+  buildTextIndex(onProgress) {
+    this.#textBuildPromise ??= this.#buildTextIndex(onProgress);
     return this.#textBuildPromise;
   }
 
-  async #buildTextIndex() {
+  async #buildTextIndex(onProgress) {
     const entries = [];
     const parser = new DOMParser();
 
@@ -189,16 +194,23 @@ export class SearchIndex {
       }
     };
 
-    for (const pack of this.journalPacks()) {
+    const packs = this.journalPacks();
+    const includeWorld = this.#includeWorldJournals();
+    const total = packs.length + (includeWorld ? 1 : 0) || 1;
+    let step = 0;
+
+    for (const pack of packs) {
       const docs = await pack.getDocuments();
       for (const journal of docs) indexJournal(journal, pack.title);
+      onProgress?.(++step, total);
     }
 
-    if (this.#includeWorldJournals()) {
+    if (includeWorld) {
       for (const journal of game.journal) {
         if (!journal.testUserPermission(game.user, "OBSERVER")) continue;
         indexJournal(journal, game.i18n.localize("PF2ERB.World"));
       }
+      onProgress?.(++step, total);
     }
 
     this.#textEntries = entries;
@@ -232,3 +244,11 @@ export class SearchIndex {
     return results;
   }
 }
+
+/**
+ * A single shared SearchIndex, reused by RulesBrowser and by module.js's
+ * "ready" hook. Having it live outside the RulesBrowser class means the name
+ * index can be warmed up in the background as soon as Foundry finishes
+ * loading, well before the person ever opens the browser window.
+ */
+export const sharedSearchIndex = new SearchIndex();

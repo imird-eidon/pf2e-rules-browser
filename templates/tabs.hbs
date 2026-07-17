@@ -2,7 +2,7 @@
     {{#each tabs}}
     <div class="rb-tab {{#if this.active}}active{{/if}} {{#if this.pinned}}pinned{{/if}}"
          data-action="selectTab" data-tab-id="{{this.id}}"
-         data-tooltip="{{this.label}}">
+         data-tooltip="{{this.label}}" draggable="true">
         <i class="{{this.icon}}"></i>
         {{#unless this.pinned}}<span class="rb-tab-label">{{this.label}}</span>{{/unless}}
         <a class="rb-tab-pin {{#if this.pinned}}pinned{{/if}}"

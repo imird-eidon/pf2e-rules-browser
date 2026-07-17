@@ -4,18 +4,6 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
-<img width="272" height="234" alt="image" src="https://github.com/user-attachments/assets/a34c319d-617d-4969-a134-4fa8e8fd418d" />
-
-<img width="809" height="555" alt="image" src="https://github.com/user-attachments/assets/12459403-90ad-4830-931c-6b818c0fdbf6" />
-
-<img width="842" height="613" alt="image" src="https://github.com/user-attachments/assets/6974c357-d317-4e23-a1e8-fa8f6437bc6b" />
-
-
-## Control Configuration
-
-<img width="393" height="417" alt="image" src="https://github.com/user-attachments/assets/4c6135b4-f248-4461-8291-d808a12b982c" />
-
-
 ## Features (v0.4.1)
 
 - **Bookmark folders.** Each bookmark item in the Home sidebar has a small folder icon (next to the remove ×) that prompts for a folder name — existing folder names are offered as suggestions, and leaving it blank moves the bookmark back to the general list. A folder is just a shared name across bookmarks: it appears in the sidebar once at least one bookmark uses it, and disappears on its own once none do. Handy for a GM to group "Shades of Blood #1" bookmarks separately from general rules lookups.

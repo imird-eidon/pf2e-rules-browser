@@ -4,6 +4,7 @@
  * and exposes a small public API on the module object.
  */
 import { MODULE_ID, RulesBrowser } from "./rules-browser.js";
+import { sharedSearchIndex } from "./search-index.js";
 
 Hooks.once("init", () => {
   // ------------------------------------------------------------------ Settings
@@ -113,6 +114,15 @@ Hooks.once("ready", () => {
   mod.api = {
     open: (uuid = null) => RulesBrowser.open(uuid)
   };
+
+  // Warm the (cheap) name index in the background as soon as the world is
+  // ready, so the very first search someone runs — in the sidebar or the
+  // command palette — doesn't pay the index-build cost. The full-text index
+  // is deliberately left lazy: it loads every journal's content, which is
+  // fine on-demand but not worth doing unconditionally on every world load.
+  sharedSearchIndex
+    .ensureNameIndex()
+    .catch((err) => console.warn(`${MODULE_ID} | Failed to warm the name index`, err));
 
   // "Share with table" chat cards: the button opens the shared document in
   // this client's Rules Browser. Delegated on the body so it works in the

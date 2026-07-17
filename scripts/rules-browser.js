@@ -24,7 +24,7 @@
  *    the window and renders the target in-place instead of letting Foundry's
  *    global handler open a new sheet.
  */
-import { SearchIndex } from "./search-index.js";
+import { SearchIndex, sharedSearchIndex } from "./search-index.js";
 
 export const MODULE_ID = "pf2e-rules-browser";
 
@@ -74,7 +74,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   #tabCounter = 0;
 
   searchQuery = "";
-  index = new SearchIndex();
+  index = sharedSearchIndex;
 
   /** Scroll offset to restore after the next render (back/forward/tab switch). */
   #pendingScroll = null;
@@ -202,8 +202,32 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     const tab = this.tabs.find((t) => t.id === target.dataset.tabId);
     if (!tab) return;
     tab.pinned = !tab.pinned;
+    if (tab.pinned) {
+      // Newly-pinned tabs jump to the front, like a browser's pinned strip.
+      // After that, drag-and-drop is free to move any tab anywhere.
+      this.tabs = [tab, ...this.tabs.filter((t) => t !== tab)];
+    }
     this.#persistSession();
     await this.render({ parts: ["tabs"] });
+  }
+
+  /**
+   * Move a tab to sit right before (or after) another tab. Backs the
+   * drag-and-drop tab reordering; this.tabs' order is the single source of
+   * truth for display, so this is the only place that needs to change it.
+   */
+  reorderTab(draggedId, targetId, placeAfter = false) {
+    if (draggedId === targetId) return;
+    const fromIndex = this.tabs.findIndex((t) => t.id === draggedId);
+    let toIndex = this.tabs.findIndex((t) => t.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const [moved] = this.tabs.splice(fromIndex, 1);
+    if (fromIndex < toIndex) toIndex--; // splice above shifted later indices down
+    this.tabs.splice(placeAfter ? toIndex + 1 : toIndex, 0, moved);
+
+    this.#persistSession();
+    this.render({ parts: ["tabs"] });
   }
 
   static async #onNewTab() {
@@ -608,15 +632,13 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       searchQuery: this.searchQuery,
       bookmarkable: !!bookmarkKey,
       bookmarked: !!bookmarkKey && this.getBookmarks().some((b) => b.key === bookmarkKey),
-      tabs: [...this.tabs]
-        .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
-        .map((t) => ({
-          id: t.id,
-          label: t.label,
-          icon: t.icon,
-          active: t.id === this.activeTabId,
-          pinned: !!t.pinned
-        }))
+      tabs: this.tabs.map((t) => ({
+        id: t.id,
+        label: t.label,
+        icon: t.icon,
+        active: t.id === this.activeTabId,
+        pinned: !!t.pinned
+      }))
     };
 
     context.search = await this.#prepareSearch();
@@ -633,6 +655,30 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     return context;
   }
 
+  /** Set while the full-text index is building; drives the progress bar. */
+  #textIndexProgress = null;
+
+  #debouncedProgressRender = foundry.utils.debounce(() => {
+    if (this.rendered) this.render({ parts: ["sidebar"] });
+  }, 150);
+
+  /** Starts the full-text build exactly once (idempotent across renders)
+   *  and wires its progress callback to a (debounced) sidebar re-render. */
+  #ensureTextIndexBuilding() {
+    if (this.index.isBuildingTextIndex || this.index.isTextIndexReady) return;
+    this.index
+      .buildTextIndex((step, total) => {
+        this.#textIndexProgress = { step, total };
+        this.#debouncedProgressRender();
+      })
+      .then(() => {
+        this.#textIndexProgress = null;
+        if (this.rendered && this.searchQuery.trim().length >= 2) {
+          this.render({ parts: ["sidebar"] });
+        }
+      });
+  }
+
   async #prepareSearch() {
     const q = this.searchQuery.trim();
     if (q.length < 2) return null;
@@ -640,15 +686,14 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     const names = await this.index.searchNames(q);
     let texts = this.index.searchText(q);
     let building = false;
+    let progress = null;
 
     if (texts === null) {
       building = true;
-      // Kick off the lazy build; refresh the sidebar when it finishes.
-      this.index.buildTextIndex().then(() => {
-        if (this.rendered && this.searchQuery.trim().length >= 2) {
-          this.render({ parts: ["sidebar"] });
-        }
-      });
+      progress = this.#textIndexProgress
+        ? Math.round((this.#textIndexProgress.step / this.#textIndexProgress.total) * 100)
+        : 0;
+      this.#ensureTextIndexBuilding();
     }
 
     texts ??= [];
@@ -657,6 +702,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       names,
       texts,
       building,
+      progress,
       hasNames: names.length > 0,
       hasTexts: texts.length > 0,
       empty: !building && names.length === 0 && texts.length === 0
@@ -946,6 +992,44 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       },
       true
     );
+
+    // 2b) Drag-and-drop tab reordering. Delegated on the app element so it
+    // survives tab-strip re-renders without needing to be re-attached.
+    this.element.addEventListener("dragstart", (event) => {
+      const tabEl = event.target.closest(".rb-tab");
+      if (!tabEl) return;
+      event.dataTransfer.setData("text/plain", tabEl.dataset.tabId);
+      event.dataTransfer.effectAllowed = "move";
+      tabEl.classList.add("dragging");
+    });
+
+    this.element.addEventListener("dragend", (event) => {
+      event.target.closest(".rb-tab")?.classList.remove("dragging");
+      for (const el of this.element.querySelectorAll(".rb-tab.drag-over")) {
+        el.classList.remove("drag-over");
+      }
+    });
+
+    this.element.addEventListener("dragover", (event) => {
+      const tabEl = event.target.closest(".rb-tab");
+      if (!tabEl) return;
+      event.preventDefault(); // required to allow a drop
+      event.dataTransfer.dropEffect = "move";
+      tabEl.classList.add("drag-over");
+    });
+
+    this.element.addEventListener("dragleave", (event) => {
+      event.target.closest(".rb-tab")?.classList.remove("drag-over");
+    });
+
+    this.element.addEventListener("drop", (event) => {
+      const tabEl = event.target.closest(".rb-tab");
+      if (!tabEl) return;
+      event.preventDefault();
+      tabEl.classList.remove("drag-over");
+      const draggedId = event.dataTransfer.getData("text/plain");
+      if (draggedId) this.reorderTab(draggedId, tabEl.dataset.tabId);
+    });
 
     // 3) Delegated search input (survives partial re-renders of the sidebar).
     this.element.addEventListener("input", (event) => {
