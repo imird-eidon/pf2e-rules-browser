@@ -4,6 +4,10 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Bugfix (v0.4.6)
+
+- Fixed middle-clicking a content-link that came from a compendium (e.g. a feat) opening the whole compendium's listing in a new tab instead of that specific document — real Foundry content-links often carry both `data-uuid` and `data-pack` at once, and the descriptor resolver now always prefers the specific document over the pack listing.
+
 ## Features (v0.4.5)
 
 - **Drag-and-drop tab reordering.** Grab any tab and drop it wherever you want. Pinning a tab still moves it to the front by default, but from then on tab order is entirely yours.
