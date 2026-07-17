@@ -4,6 +4,16 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Features (v0.4.5)
+
+- **Drag-and-drop tab reordering.** Grab any tab and drop it wherever you want. Pinning a tab still moves it to the front by default, but from then on tab order is entirely yours.
+- **Faster first search.** The name index now warms up in the background as soon as Foundry finishes loading (instead of on first use), so the very first search in the sidebar or command palette is instant.
+- **Real progress bar** for the lazy full-text index build, based on the number of journal packs actually processed, instead of a generic spinner.
+
+## Features (v0.4.2)
+
+- Default keybinding for opening the browser changed to `Ctrl+S`.
+
 ## Features (v0.4.1)
 
 - **Bookmark folders.** Each bookmark item in the Home sidebar has a small folder icon (next to the remove ×) that prompts for a folder name — existing folder names are offered as suggestions, and leaving it blank moves the bookmark back to the general list. A folder is just a shared name across bookmarks: it appears in the sidebar once at least one bookmark uses it, and disappears on its own once none do. Handy for a GM to group "Shades of Blood #1" bookmarks separately from general rules lookups.
@@ -32,7 +42,7 @@ Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agn
 - **Bookmarks (per user).** The star button in the toolbar bookmarks the current document or compendium; bookmarks appear at the top of the Home sidebar with per-item remove buttons. Stored as a flag on your User document, so each player keeps their own set that follows them across devices.
 - **Session persistence (per user).** Tabs and their histories are saved (debounced) as you browse and restored when you reopen the browser — even after reloading Foundry. Histories are capped at 30 entries per tab when persisted. Can be disabled in settings.
 - **Escape hatch.** Every document has a corner button to open its native Foundry sheet when you actually want a separate window (e.g. to drag items to a character sheet).
-- **Opening it:** button in the Journal sidebar tab, keybinding (default `Alt+R`, configurable), or the API:
+- **Opening it:** button in the Journal sidebar tab, keybinding (default `Ctrl+S`, configurable), or the API:
 
   ```js
   game.modules.get("pf2e-rules-browser").api.open();                 // home

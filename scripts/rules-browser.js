@@ -353,9 +353,23 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.navigateTo({ home: true });
   }
 
+  /**
+   * Resolve a navigable view descriptor from a link/element dataset.
+   * A specific document (data-uuid) always wins over a whole-pack listing
+   * (data-pack) — real Foundry content-links (e.g. "Alchemical Crafting")
+   * commonly carry BOTH attributes at once (the document's uuid, plus which
+   * pack it came from), so checking pack first would send every one of them
+   * to the pack's full listing instead of the document itself.
+   */
+  static #descriptorFromDataset({ uuid, pack, view, hash } = {}) {
+    if (uuid) return { uuid, hash: hash ?? null };
+    if (pack) return { pack };
+    if (view === "world") return { world: true };
+    return null;
+  }
+
   static async #onNavigate(event, target) {
-    const { uuid, pack, view } = target.dataset;
-    const descriptor = view === "world" ? { world: true } : pack ? { pack } : uuid ? { uuid } : null;
+    const descriptor = RulesBrowser.#descriptorFromDataset(target.dataset);
     if (!descriptor) return;
     // Ctrl/Cmd+click: open in a background tab, browser-style.
     if (event.ctrlKey || event.metaKey) return this.openInNewTab(descriptor);
@@ -977,9 +991,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         if (link) {
           event.preventDefault();
           event.stopPropagation();
-          const { uuid, pack, view } = link.dataset;
-          const descriptor =
-            view === "world" ? { world: true } : pack ? { pack } : uuid ? { uuid } : null;
+          const descriptor = RulesBrowser.#descriptorFromDataset(link.dataset);
           if (descriptor) this.openInNewTab(descriptor);
           return;
         }

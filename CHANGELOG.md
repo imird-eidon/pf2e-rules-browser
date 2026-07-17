@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.6
+
+- Fixed a bug where middle-clicking a content-link that came from a compendium (e.g. a feat) could open the whole compendium's listing in a new tab instead of that specific document. Real Foundry content-links often carry both `data-uuid` and `data-pack` at once; the descriptor resolver now always prefers the specific document.
+
 ## 0.4.5
 
 - Drag-and-drop tab reordering. Pinning a tab still jumps it to the front by default, but any tab can be freely dragged anywhere afterward.
