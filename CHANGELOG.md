@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.10
+
+- Fixed the package listing's gallery images on foundryvtt.com — they were pointing at temporary GitHub attachment URLs (`private-user-images.githubusercontent.com`, which expire after a few minutes) instead of permanent raw file URLs. No module code changed.
+
 ## 0.4.9
 
 - Fixed a blank sidebar when opening an item (feat, spell, etc.) in a tab that never "visited" its containing compendium first — happened with middle-click, bookmarks, the command palette, and "recently viewed". The item's own compendium listing is now rebuilt on the fly, with the current item highlighted.
