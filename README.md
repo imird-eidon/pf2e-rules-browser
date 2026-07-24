@@ -4,6 +4,14 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Features (v0.4.14)
+
+- **Trait hover tooltips.** Trait pills (MANIPULATE, CONCENTRATE, etc.) now show the same hover tooltip with the trait's full description that Foundry's native item sheets show — using Foundry's own core tooltip system, so no custom popup code was needed. Depends on the PF2e system exposing a trait → description-key map (`CONFIG.PF2E.traitsDescriptions`); if a given trait doesn't show a tooltip, its slug may not be in that map, or the property name may differ from what's expected — let us know which trait if you spot one missing.
+
+## Bugfix (v0.4.13)
+
+- The right-click context menu now also works on content-links inside a document's description (e.g. "Shatter" referenced from a spell list) — previously it only worked on sidebar items, while middle-click already worked everywhere.
+
 ## Features (v0.4.12)
 
 - **Bookmarks and Recently Viewed are now pinned to the sidebar everywhere.** They used to only show on Home — navigating into a feat or a journal page replaced them with that compendium's or journal's own listing. Now they sit at the top of the sidebar on every screen, updating live, with the contextual listing (compendium siblings, a journal's own pages, etc.) below them. They share the same collapse state across pages, so folding "Bookmarks" once keeps it folded everywhere.

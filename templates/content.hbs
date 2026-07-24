@@ -41,7 +41,7 @@
             {{#if content.header.traits.length}}
             <div class="rb-traits">
                 {{#if content.header.rarity}}<span class="rb-trait rarity">{{content.header.rarity}}</span>{{/if}}
-                {{#each content.header.traits}}<span class="rb-trait">{{this}}</span>{{/each}}
+                {{#each content.header.traits}}<span class="rb-trait" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}}>{{this.label}}</span>{{/each}}
             </div>
             {{/if}}
             {{#if content.header.source}}<span class="rb-meta rb-source">{{content.header.source}}</span>{{/if}}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.14
+
+- Trait pills (e.g. MANIPULATE, CONCENTRATE) now show the same hover tooltip with the trait's full description that Foundry's native item sheets show, using Foundry's own core tooltip system.
+
+## 0.4.13
+
+- The right-click context menu now also works on content-links inside a document's description (e.g. "Shatter" referenced from a spell list) — previously it only worked on sidebar items, matching what middle-click already did everywhere.
+
 ## 0.4.12
 
 - Bookmarks (and folders) and Recently Viewed now stay pinned to the top of the sidebar on every screen, not just Home — they no longer get replaced by the compendium/journal listing of whatever page you're currently viewing. They still update live and share the same collapse state everywhere.

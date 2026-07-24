@@ -1049,9 +1049,16 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     context.sidebar = tab.lastSidebar ?? { sections: [] };
 
     const sys = item.system ?? {};
-    const traits = (sys.traits?.value ?? []).map((t) =>
-      game.i18n.localize(CONFIG.PF2E?.actionTraits?.[t] ?? CONFIG.PF2E?.featTraits?.[t] ?? t)
-    );
+    // PF2e keeps a trait -> i18n-key map for these long-form descriptions
+    // (the same one its native sheets use for the trait hover tooltips).
+    // Passing the raw key as data-tooltip lets Foundry's own TooltipManager
+    // localize and render it — no custom popup code needed on our side.
+    const traitDescriptionKeys =
+      CONFIG.PF2E?.traitsDescriptions ?? CONFIG.PF2E?.traitDescriptions ?? {};
+    const traits = (sys.traits?.value ?? []).map((t) => ({
+      label: game.i18n.localize(CONFIG.PF2E?.actionTraits?.[t] ?? CONFIG.PF2E?.featTraits?.[t] ?? t),
+      tooltip: traitDescriptionKeys[t] ?? null
+    }));
 
     const content = {
       header: {
@@ -1192,13 +1199,16 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (draggedId) this.reorderTab(draggedId, tabEl.dataset.tabId);
     });
 
-    // 4) Right-click context menus: sidebar items (open in new tab, copy
-    //    link, bookmark) and tabs (pin, clear history, close).
+    // 4) Right-click context menus: sidebar items AND content-links inside
+    //    the document body (open in new tab, copy link, bookmark), plus
+    //    tabs (pin, clear history, close).
     this.element.addEventListener("contextmenu", (event) => {
-      const navLink = event.target.closest(".rb-sidebar a[data-action='navigate']");
+      const navLink = event.target.closest(
+        ".rb-sidebar a[data-action='navigate'], a.content-link"
+      );
       if (navLink) {
         event.preventDefault();
-        this.#openSidebarItemContextMenu(event.clientX, event.clientY, navLink);
+        this.#openLinkContextMenu(event.clientX, event.clientY, navLink);
         return;
       }
       const tabEl = event.target.closest(".rb-tab");
@@ -1398,9 +1408,17 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  /** Right-click menu for a sidebar item link (any `[data-action=navigate]`
-   *  with a uuid or pack — bookmarks, recents, compendium listings, etc). */
-  #openSidebarItemContextMenu(x, y, link) {
+  /** Extract a human-readable name from a link: sidebar items wrap it in a
+   *  `.rb-item-name` span, while content-links inside a description just
+   *  have their own text content (e.g. "Shatter"). */
+  #linkLabel(link) {
+    return link.querySelector(".rb-item-name")?.textContent?.trim() || link.textContent?.trim();
+  }
+
+  /** Right-click menu for a navigable link: sidebar items (bookmarks,
+   *  recents, compendium listings...) AND content-links inside a document's
+   *  description (e.g. "Shatter" referenced from a spell list). */
+  #openLinkContextMenu(x, y, link) {
     const descriptor = RulesBrowser.#descriptorFromDataset(link.dataset);
     if (!descriptor) return;
 
@@ -1418,10 +1436,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       items.push({
         icon: "fa-solid fa-copy",
         label: game.i18n.localize("PF2ERB.Context.CopyLink"),
-        onClick: () => {
-          const name = link.querySelector(".rb-item-name")?.textContent?.trim();
-          this.#copyUuidLink(descriptor.uuid, name);
-        }
+        onClick: () => this.#copyUuidLink(descriptor.uuid, this.#linkLabel(link))
       });
     }
 
@@ -1430,9 +1445,8 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         icon: bookmarked ? "fa-solid fa-star" : "fa-regular fa-star",
         label: game.i18n.localize(bookmarked ? "PF2ERB.RemoveBookmark" : "PF2ERB.AddBookmark"),
         onClick: () => {
-          const label = link.querySelector(".rb-item-name")?.textContent?.trim();
-          const icon = link.querySelector("i")?.className;
-          this.toggleBookmarkForView(descriptor, label, icon);
+          const icon = link.querySelector("i")?.className || "fa-solid fa-star";
+          this.toggleBookmarkForView(descriptor, this.#linkLabel(link), icon);
         }
       });
     }
