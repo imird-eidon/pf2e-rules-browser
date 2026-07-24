@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.11
+
+- Right-click context menus: sidebar items (open in new tab, copy an `@UUID` link, bookmark/unbookmark, open native sheet) and tabs (new tab, pin/unpin, clear this tab's history, clear all tabs' history, close).
+- Clearing a tab's history keeps you exactly where you are — it only wipes the back/forward stack, not your current page.
+
 ## 0.4.10
 
 - Fixed the package listing's gallery images on foundryvtt.com — they were pointing at temporary GitHub attachment URLs (`private-user-images.githubusercontent.com`, which expire after a few minutes) instead of permanent raw file URLs. No module code changed.

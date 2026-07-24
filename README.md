@@ -4,6 +4,13 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Features (v0.4.11)
+
+- **Right-click context menus.**
+  - On any sidebar item: open in a new (background) tab, copy an `@UUID[...]` content-link to the clipboard, bookmark/unbookmark, or open the document's native Foundry sheet.
+  - On a tab: new tab, pin/unpin, clear that tab's history, clear every open tab's history, or close it.
+- **Clearing history doesn't move you.** Clearing a tab's back/forward stack keeps you exactly on the page you're currently viewing — useful once a long session has built up a history that's more clutter than useful.
+
 ## Bugfix (v0.4.9)
 
 - Fixed a blank sidebar when opening an item (feat, spell, etc.) in a tab that never "visited" its containing compendium first — this happened with middle-click, bookmarks, the command palette, and "recently viewed". The item's own compendium listing is now rebuilt on the fly, with the current item highlighted.

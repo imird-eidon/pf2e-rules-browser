@@ -200,14 +200,17 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onTogglePin(event, target) {
     event.stopPropagation();
-    const tab = this.tabs.find((t) => t.id === target.dataset.tabId);
+    await this.togglePin(target.dataset.tabId);
+  }
+
+  /** Toggle a tab's pinned state. Used by the pin button and the tab's
+   *  context menu. Newly-pinned tabs jump to the front, like a browser's
+   *  pinned strip; after that, drag-and-drop is free to move any tab. */
+  async togglePin(tabId) {
+    const tab = this.tabs.find((t) => t.id === tabId);
     if (!tab) return;
     tab.pinned = !tab.pinned;
-    if (tab.pinned) {
-      // Newly-pinned tabs jump to the front, like a browser's pinned strip.
-      // After that, drag-and-drop is free to move any tab anywhere.
-      this.tabs = [tab, ...this.tabs.filter((t) => t !== tab)];
-    }
+    if (tab.pinned) this.tabs = [tab, ...this.tabs.filter((t) => t !== tab)];
     this.#persistSession();
     await this.render({ parts: ["tabs"] });
   }
@@ -350,6 +353,27 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.render();
   }
 
+  /** Wipe a tab's back/forward stack down to just its current page — used
+   *  by the tab's context menu. Doesn't navigate away from where it is. */
+  async clearTabHistory(tabId) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    tab.history = [tab.history[tab.historyIndex] ?? { home: true }];
+    tab.historyIndex = 0;
+    this.#persistSession();
+    await this.render();
+  }
+
+  /** Same as clearTabHistory, but for every open tab at once. */
+  async clearAllHistory() {
+    for (const tab of this.tabs) {
+      tab.history = [tab.history[tab.historyIndex] ?? { home: true }];
+      tab.historyIndex = 0;
+    }
+    this.#persistSession();
+    await this.render();
+  }
+
   static async #onHome() {
     await this.navigateTo({ home: true });
   }
@@ -454,7 +478,14 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onToggleBookmark() {
-    const view = this.currentView;
+    const tab = this.activeTab;
+    await this.toggleBookmarkForView(this.currentView, tab?.label, tab?.icon);
+  }
+
+  /** Toggle whether a view is bookmarked. Used by the toolbar star (for the
+   *  active tab's current view) and by the sidebar item context menu (for
+   *  an arbitrary item that isn't necessarily the one currently open). */
+  async toggleBookmarkForView(view, label, icon) {
     const key = this.#viewKey(view);
     if (!key) return;
 
@@ -462,12 +493,11 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     const existing = bookmarks.findIndex((b) => b.key === key);
     if (existing >= 0) bookmarks.splice(existing, 1);
     else {
-      const tab = this.activeTab;
       bookmarks.push({
         key,
         view: view.uuid ? { uuid: view.uuid } : { pack: view.pack },
-        label: tab?.label ?? key,
-        icon: tab?.icon ?? "fa-solid fa-star",
+        label: label ?? key,
+        icon: icon ?? "fa-solid fa-star",
         folder: null
       });
     }
@@ -641,6 +671,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onClose?.(options);
     this.#tableObserver?.disconnect();
     this.#closeCommandPalette();
+    this.#closeContextMenu();
     this.#saveSession();
   }
 
@@ -1141,14 +1172,30 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (draggedId) this.reorderTab(draggedId, tabEl.dataset.tabId);
     });
 
-    // 4) Delegated search input (survives partial re-renders of the sidebar).
+    // 4) Right-click context menus: sidebar items (open in new tab, copy
+    //    link, bookmark) and tabs (pin, clear history, close).
+    this.element.addEventListener("contextmenu", (event) => {
+      const navLink = event.target.closest(".rb-sidebar a[data-action='navigate']");
+      if (navLink) {
+        event.preventDefault();
+        this.#openSidebarItemContextMenu(event.clientX, event.clientY, navLink);
+        return;
+      }
+      const tabEl = event.target.closest(".rb-tab");
+      if (tabEl) {
+        event.preventDefault();
+        this.#openTabContextMenu(event.clientX, event.clientY, tabEl.dataset.tabId);
+      }
+    });
+
+    // 5) Delegated search input (survives partial re-renders of the sidebar).
     this.element.addEventListener("input", (event) => {
       const input = event.target.closest("input.rb-search");
       if (!input) return;
       this.#debouncedSearch(input.value);
     });
 
-    // 5) Enter in the search box opens the first result.
+    // 6) Enter in the search box opens the first result.
     this.element.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       if (!event.target.closest("input.rb-search")) return;
@@ -1252,6 +1299,183 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (fg && fg.a > 0.4 && luminance(fg) < 0.45) {
         setImportant(el, "color", isHeaderish(el) ? HEADER_FG : NEUTRAL_FG);
       }
+    }
+  }
+
+  /* -------------------------------------------- */
+  /*  Context menus (right-click)                 */
+  /* -------------------------------------------- */
+
+  #contextMenuEl = null;
+  #contextMenuCleanup = null;
+
+  #closeContextMenu() {
+    this.#contextMenuEl?.remove();
+    this.#contextMenuEl = null;
+    this.#contextMenuCleanup?.();
+    this.#contextMenuCleanup = null;
+  }
+
+  /**
+   * Build and show a small context menu at (x, y), appended to document.body
+   * (same reasoning as the command palette: it must survive a Handlebars
+   * re-render of the app's parts).
+   * @param {Array<{label:string, icon:string, onClick:Function, disabled?:boolean}|{separator:true}>} items
+   */
+  #openContextMenu(x, y, items) {
+    this.#closeContextMenu();
+
+    const menu = document.createElement("div");
+    menu.className = "pf2e-rules-browser rb-context-menu";
+
+    for (const item of items) {
+      if (item.separator) {
+        menu.appendChild(document.createElement("div")).className = "rb-context-separator";
+        continue;
+      }
+      const entry = document.createElement("div");
+      entry.className = "rb-context-item" + (item.disabled ? " disabled" : "");
+      const icon = document.createElement("i");
+      icon.className = item.icon;
+      const label = document.createElement("span");
+      label.textContent = item.label;
+      entry.append(icon, label);
+      if (!item.disabled) {
+        entry.addEventListener("click", () => {
+          this.#closeContextMenu();
+          item.onClick();
+        });
+      }
+      menu.appendChild(entry);
+    }
+
+    document.body.appendChild(menu);
+    this.#contextMenuEl = menu;
+
+    // Clamp position so the menu never renders off-screen.
+    const rect = menu.getBoundingClientRect();
+    const left = Math.max(4, Math.min(x, window.innerWidth - rect.width - 4));
+    const top = Math.max(4, Math.min(y, window.innerHeight - rect.height - 4));
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+
+    const onOutside = (event) => {
+      if (!menu.contains(event.target)) this.#closeContextMenu();
+    };
+    const onEscape = (event) => {
+      if (event.key === "Escape") this.#closeContextMenu();
+    };
+    // Deferred so the very right-click that opened the menu doesn't
+    // immediately register as an "outside" click and close it.
+    setTimeout(() => {
+      document.addEventListener("mousedown", onOutside, true);
+      document.addEventListener("keydown", onEscape);
+    }, 0);
+
+    this.#contextMenuCleanup = () => {
+      document.removeEventListener("mousedown", onOutside, true);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }
+
+  /** Right-click menu for a sidebar item link (any `[data-action=navigate]`
+   *  with a uuid or pack — bookmarks, recents, compendium listings, etc). */
+  #openSidebarItemContextMenu(x, y, link) {
+    const descriptor = RulesBrowser.#descriptorFromDataset(link.dataset);
+    if (!descriptor) return;
+
+    const key = this.#viewKey(descriptor);
+    const bookmarked = !!key && this.getBookmarks().some((b) => b.key === key);
+    const items = [
+      {
+        icon: "fa-solid fa-up-right-from-square",
+        label: game.i18n.localize("PF2ERB.Context.OpenNewTab"),
+        onClick: () => this.openInNewTab(descriptor)
+      }
+    ];
+
+    if (descriptor.uuid) {
+      items.push({
+        icon: "fa-solid fa-copy",
+        label: game.i18n.localize("PF2ERB.Context.CopyLink"),
+        onClick: () => {
+          const name = link.querySelector(".rb-item-name")?.textContent?.trim();
+          this.#copyUuidLink(descriptor.uuid, name);
+        }
+      });
+    }
+
+    if (key) {
+      items.push({
+        icon: bookmarked ? "fa-solid fa-star" : "fa-regular fa-star",
+        label: game.i18n.localize(bookmarked ? "PF2ERB.RemoveBookmark" : "PF2ERB.AddBookmark"),
+        onClick: () => {
+          const label = link.querySelector(".rb-item-name")?.textContent?.trim();
+          const icon = link.querySelector("i")?.className;
+          this.toggleBookmarkForView(descriptor, label, icon);
+        }
+      });
+    }
+
+    if (descriptor.uuid) {
+      items.push({
+        icon: "fa-solid fa-arrow-up-right-from-square",
+        label: game.i18n.localize("PF2ERB.OpenSheet"),
+        onClick: async () => {
+          const doc = await fromUuid(descriptor.uuid);
+          doc?.sheet?.render(true);
+        }
+      });
+    }
+
+    this.#openContextMenu(x, y, items);
+  }
+
+  /** Right-click menu for a tab in the tab strip. */
+  #openTabContextMenu(x, y, tabId) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    this.#openContextMenu(x, y, [
+      {
+        icon: "fa-solid fa-plus",
+        label: game.i18n.localize("PF2ERB.NewTab"),
+        onClick: () => this.quickNewTab()
+      },
+      {
+        icon: "fa-solid fa-thumbtack",
+        label: game.i18n.localize(tab.pinned ? "PF2ERB.Unpin" : "PF2ERB.Pin"),
+        onClick: () => this.togglePin(tabId)
+      },
+      { separator: true },
+      {
+        icon: "fa-solid fa-clock-rotate-left",
+        label: game.i18n.localize("PF2ERB.Context.ClearTabHistory"),
+        onClick: () => this.clearTabHistory(tabId)
+      },
+      {
+        icon: "fa-solid fa-trash-can",
+        label: game.i18n.localize("PF2ERB.Context.ClearAllHistory"),
+        onClick: () => this.clearAllHistory()
+      },
+      { separator: true },
+      {
+        icon: "fa-solid fa-xmark",
+        label: game.i18n.localize("PF2ERB.CloseTab"),
+        disabled: tab.pinned,
+        onClick: () => this.closeTab(tabId)
+      }
+    ]);
+  }
+
+  /** Copy an `@UUID[...]` content-link string to the clipboard. */
+  async #copyUuidLink(uuid, name) {
+    const text = name ? `@UUID[${uuid}]{${name}}` : `@UUID[${uuid}]`;
+    try {
+      await navigator.clipboard.writeText(text);
+      ui.notifications.info(game.i18n.localize("PF2ERB.Context.CopiedNotification"));
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Failed to copy to clipboard`, err);
     }
   }
 
