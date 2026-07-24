@@ -718,6 +718,15 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     // Fallbacks so templates never explode.
     context.sidebar ??= tab.lastSidebar ?? { sections: [] };
     context.content ??= { error: game.i18n.localize("PF2ERB.NotFound") };
+
+    // Bookmarks/Recent stay pinned to the top of the sidebar on every screen
+    // (Home included — #prepareHome no longer builds them itself), so they
+    // don't get replaced by whatever compendium/journal the current page
+    // happens to belong to.
+    context.sidebar = {
+      sections: [...this.#persistentSidebarSections(), ...context.sidebar.sections]
+    };
+
     return context;
   }
 
@@ -807,13 +816,26 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
 
-    // Built in *reverse* display order and unshifted in that order, since
-    // the last unshift ends up frontmost: Recent goes on first (lands right
-    // after Bookmarks), then Bookmarks goes on last (lands at the very
-    // front) — matching the requested "bookmarks first of all" order.
+    context.sidebar = { sections };
+    tab.lastSidebar = context.sidebar;
+    context.content = { welcome: true };
+  }
+
+  /**
+   * Bookmarks (+ folders) and Recently Viewed, in that display order. Shown
+   * at the top of the sidebar on *every* screen — not just Home — since a
+   * GM wants those to stay put and simply update live, rather than being
+   * replaced by whatever compendium/journal the current page happens to
+   * belong to. Uses the same collapse keys as before, so folding a section
+   * once keeps it folded no matter which page you're looking at.
+   */
+  #persistentSidebarSections() {
+    const collapsed = this.getCollapsedSections();
+    const sections = [];
+
     const recents = this.getRecentsForDisplay();
     if (recents.length) {
-      sections.unshift({
+      sections.push({
         key: "recent",
         label: game.i18n.localize("PF2ERB.Recent"),
         items: recents.map((r) => ({ name: r.label, icon: r.icon, uuid: r.uuid })),
@@ -833,7 +855,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       });
 
       // General bookmarks first, then each folder — built in display order,
-      // then unshifted as a single batch so that order is preserved.
+      // then unshifted onto the front (ahead of Recent) as a single batch.
       const bookmarkSections = [];
       const general = bookmarks.filter((b) => !b.folder);
       if (general.length) {
@@ -857,9 +879,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       sections.unshift(...bookmarkSections);
     }
 
-    context.sidebar = { sections };
-    tab.lastSidebar = context.sidebar;
-    context.content = { welcome: true };
+    return sections;
   }
 
   async #prepareWorld(context, tab) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.12
+
+- Bookmarks (and folders) and Recently Viewed now stay pinned to the top of the sidebar on every screen, not just Home — they no longer get replaced by the compendium/journal listing of whatever page you're currently viewing. They still update live and share the same collapse state everywhere.
+
 ## 0.4.11
 
 - Right-click context menus: sidebar items (open in new tab, copy an `@UUID` link, bookmark/unbookmark, open native sheet) and tabs (new tab, pin/unpin, clear this tab's history, clear all tabs' history, close).

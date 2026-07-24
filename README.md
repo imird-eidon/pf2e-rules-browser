@@ -4,6 +4,10 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Features (v0.4.12)
+
+- **Bookmarks and Recently Viewed are now pinned to the sidebar everywhere.** They used to only show on Home — navigating into a feat or a journal page replaced them with that compendium's or journal's own listing. Now they sit at the top of the sidebar on every screen, updating live, with the contextual listing (compendium siblings, a journal's own pages, etc.) below them. They share the same collapse state across pages, so folding "Bookmarks" once keeps it folded everywhere.
+
 ## Features (v0.4.11)
 
 - **Right-click context menus.**
