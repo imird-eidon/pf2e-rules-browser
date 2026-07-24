@@ -30,6 +30,8 @@
   "PF2ERB.Context.CopiedNotification": "Enlace copiado al portapapeles.",
   "PF2ERB.Context.ClearTabHistory": "Borrar historial de esta pestaña",
   "PF2ERB.Context.ClearAllHistory": "Borrar historial de todas las pestañas",
+  "PF2ERB.ScrollTop": "Ir arriba",
+  "PF2ERB.InlineRollFailed": "No se ha podido tirar esta fórmula.",
   "PF2ERB.Settings.RememberSession.Name": "Recordar sesión de pestañas",
   "PF2ERB.Settings.RememberSession.Hint": "Guarda tus pestañas e historiales y los restaura al volver a abrir el navegador, incluso tras recargar Foundry.",
   "PF2ERB.Compendia": "Compendios (diarios)",

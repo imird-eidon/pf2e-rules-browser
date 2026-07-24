@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.18
+
+- Fixed inline damage-roll buttons (e.g. persistent damage) doing nothing / throwing a console error ("Failed to parse damage formula {}"). PF2e's own click handler resolves item context via a native sheet or a non-compendium UUID — it explicitly skips that resolution for any "Compendium." UUID, which is most of what this module shows. These clicks are now handled directly: rolled with the formula already correctly baked into the link (via the rollData fix from 0.4.17) and posted to chat, bypassing PF2e's broken fallback. Trades away the native configurable "Damage Roll" dialog for a roll that actually works.
+
+## 0.4.17
+
+- Fixed incorrect inline roll values in descriptions (e.g. a spell showing "0 persistent acid" instead of the correct "1"). Neither enrichHTML call passed explicit `rollData`, so formulas referencing the item's own data had nothing to resolve against and fell back to 0. Both items and journal pages now pass `getRollData()`, matching what Foundry's native sheets do.
+
+## 0.4.16
+
+- Fixed the "scroll to top" button appearing to scroll away with the text instead of staying pinned. CSS-only anchoring (position:absolute) didn't stay clamped to the visible box in practice; it's now positioned in real screen pixels computed from the content pane's actual on-screen rectangle, which is immune to that.
+
+## 0.4.15
+
+- Added a "scroll to top" button that fades in once you've scrolled down a bit in a long page, and fades back out near the top. Subtle by default, fully visible on hover.
+
 ## 0.4.14
 
 - Trait pills (e.g. MANIPULATE, CONCENTRATE) now show the same hover tooltip with the trait's full description that Foundry's native item sheets show, using Foundry's own core tooltip system.

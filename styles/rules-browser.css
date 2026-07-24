@@ -358,9 +358,47 @@
 
 /* --------------------------------------------------------------- Content */
 .pf2e-rules-browser .rb-content {
+    position: relative; /* anchors .rb-scroll-top to the visible box, not the scrolled content */
     overflow-y: auto;
     padding: 1rem 1.5rem 2rem;
     background: rgb(255 255 255 / 2%);
+}
+
+/* Floats in the visible corner of the content pane regardless of scroll
+   position. Positioned via JS (top/left in real screen pixels, computed
+   from .rb-content's actual bounding rect — see #wireScrollTopButton) since
+   CSS-only anchoring didn't stay pinned to the visible box in practice.
+   Hidden until scrolled down a bit, subtle even then, more visible on hover
+   so it doesn't fight for attention with the text. */
+.pf2e-rules-browser .rb-scroll-top {
+    position: fixed;
+    z-index: 100000;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background: rgb(28 23 20 / 85%);
+    border: 1px solid rgb(255 255 255 / 15%);
+    color: #d8d0c5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.pf2e-rules-browser .rb-scroll-top.visible {
+    opacity: 0.55;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.pf2e-rules-browser .rb-scroll-top.visible:hover {
+    opacity: 1;
+    transform: translateY(-2px);
 }
 
 .pf2e-rules-browser .rb-welcome {

@@ -4,6 +4,22 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Bugfix (v0.4.18)
+
+- Fixed inline damage-roll buttons (e.g. persistent damage) doing nothing and throwing a console error ("Failed to parse damage formula {}"). PF2e's own click handler resolves item context via a native sheet or, failing that, a non-compendium UUID — it explicitly skips that fallback for any UUID starting with "Compendium.", which is most of what this module displays. These clicks are now handled directly instead: the formula is already correctly resolved in the link (thanks to the rollData fix in 0.4.17), so it's rolled and posted to chat without needing PF2e's own resolution to succeed. This trades away the native configurable "Damage Roll" dialog (editable modifiers, roll visibility, etc.) for a roll that reliably works on unowned compendium content.
+
+## Bugfix (v0.4.17)
+
+- Fixed incorrect inline roll values in descriptions — e.g. a spell showing "0 persistent acid" instead of the correct "1". Neither `enrichHTML` call passed explicit `rollData`, so formulas referencing the item's own data had nothing to resolve against and silently fell back to 0. Both items and journal pages now pass `getRollData()`, matching what Foundry's native sheets do.
+
+## Bugfix (v0.4.16)
+
+- Fixed the "scroll to top" button appearing to scroll away with the text instead of staying pinned in its corner. It's now positioned in real screen pixels computed from the content pane's actual on-screen rectangle, rather than relying on CSS `position: absolute`, which didn't stay clamped to the visible box the way expected.
+
+## Features (v0.4.15)
+
+- **"Scroll to top" button.** Fades in near the bottom-right of the content pane once you've scrolled down a bit on a long page (like a class's level-by-level feature table), and fades back out once you're near the top. Subtle at rest, fully visible on hover, so it stays out of the way of reading.
+
 ## Features (v0.4.14)
 
 - **Trait hover tooltips.** Trait pills (MANIPULATE, CONCENTRATE, etc.) now show the same hover tooltip with the trait's full description that Foundry's native item sheets show — using Foundry's own core tooltip system, so no custom popup code was needed. Depends on the PF2e system exposing a trait → description-key map (`CONFIG.PF2E.traitsDescriptions`); if a given trait doesn't show a tooltip, its slug may not be in that map, or the property name may differ from what's expected — let us know which trait if you spot one missing.

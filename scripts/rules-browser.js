@@ -1009,7 +1009,8 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         foundry.applications?.ux?.TextEditor?.implementation ?? TextEditor;
       content.html = await TextEditorImpl.enrichHTML(page.text.content, {
         relativeTo: page,
-        secrets: page.isOwner
+        secrets: page.isOwner,
+        rollData: page.getRollData?.() ?? {}
       });
     } else if (page.type === "image" && page.src) {
       content.image = { src: page.src, caption: page.image?.caption ?? "" };
@@ -1081,7 +1082,8 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         foundry.applications?.ux?.TextEditor?.implementation ?? TextEditor;
       content.html = await TextEditorImpl.enrichHTML(description, {
         relativeTo: item,
-        secrets: item.isOwner
+        secrets: item.isOwner,
+        rollData: item.getRollData?.() ?? {}
       });
     }
 
@@ -1121,6 +1123,29 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         const view = { uuid, hash: link.dataset.hash ?? null };
         if (event.ctrlKey || event.metaKey) this.openInNewTab(view);
         else this.navigateTo(view);
+      },
+      true
+    );
+
+    // 1b) Intercept inline damage-roll clicks (capture phase). PF2e's own
+    //     click handler (TextEditorPF2e._onClickInlineRoll) resolves item
+    //     context by looking for a `.sheet` ancestor registered in
+    //     ui.windows, or failing that, an ancestor with data-item-uuid — but
+    //     it explicitly SKIPS that UUID fallback for any UUID starting with
+    //     "Compendium.", which is exactly what most content here is. With
+    //     neither path available, it falls back to an empty rollData object
+    //     and throws trying to parse a blank formula. Since we already have
+    //     the correct, fully-resolved formula baked into data-formula (from
+    //     the rollData we pass to enrichHTML), we roll it ourselves instead
+    //     of waiting for PF2e's resolution to fail.
+    this.element.addEventListener(
+      "click",
+      (event) => {
+        const link = event.target.closest("a.inline-roll[data-damage-roll]");
+        if (!link?.dataset.formula) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.#rollInlineDamage(link);
       },
       true
     );
@@ -1249,6 +1274,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     // anything else.
     this.#fixContentContrast(contentEl);
     this.#watchForLateContent(contentEl);
+    this.#wireScrollTopButton(contentEl);
 
     if (this.#pendingScroll !== null) {
       contentEl.scrollTop = this.#pendingScroll;
@@ -1274,6 +1300,59 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     // childList/subtree only: setting inline styles doesn't trigger this, so
     // the contrast fix can't re-trigger itself in a loop.
     this.#tableObserver.observe(contentEl, { childList: true, subtree: true });
+  }
+
+  /**
+   * Show/hide the floating "scroll to top" button based on scroll position,
+   * position it in real screen pixels, and wire its click. CSS-only
+   * anchoring (position:absolute relative to `.rb-content`) turned out not
+   * to stay pinned to the visible box in practice — likely a CSS Grid
+   * quirk where a grid item's rendered height doesn't stay clamped the way
+   * `overflow-y: auto` would suggest — so instead this reads the
+   * container's *actual* on-screen rectangle via getBoundingClientRect()
+   * and positions the button in fixed screen coordinates. That's immune to
+   * whatever the underlying layout is doing, and doesn't move with the
+   * internal scroll offset since a bounding rect reflects the visible
+   * (clipped) box, not the scrolled content inside it.
+   *
+   * Guarded to attach exactly once per physical `.rb-content` node
+   * (re-renders may hand us a brand new one). The scroll/click handlers
+   * look up `.rb-scroll-top` fresh each time rather than capturing it once,
+   * since the button itself is re-created by every content-part render
+   * even when `.rb-content` itself isn't.
+   */
+  #wireScrollTopButton(contentEl) {
+    if (contentEl.dataset.scrollTopWired) return;
+    contentEl.dataset.scrollTopWired = "true";
+
+    const MARGIN_PX = 20;
+    const SHOW_AFTER_PX = 240;
+
+    const positionButton = () => {
+      const button = contentEl.querySelector(".rb-scroll-top");
+      if (!button) return;
+      const rect = contentEl.getBoundingClientRect();
+      button.style.top = `${rect.bottom - MARGIN_PX - button.offsetHeight}px`;
+      button.style.left = `${rect.right - MARGIN_PX - button.offsetWidth}px`;
+    };
+
+    contentEl.addEventListener("scroll", () => {
+      const button = contentEl.querySelector(".rb-scroll-top");
+      button?.classList.toggle("visible", contentEl.scrollTop > SHOW_AFTER_PX);
+      positionButton();
+    });
+
+    contentEl.addEventListener("click", (event) => {
+      if (event.target.closest(".rb-scroll-top")) {
+        contentEl.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+
+    // Keep it aligned if the window is resized (a drag-move of the window
+    // itself is a rarer edge case; the next scroll nudges it back anyway).
+    new ResizeObserver(positionButton).observe(contentEl);
+
+    positionButton();
   }
 
   /**
@@ -1510,6 +1589,29 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.info(game.i18n.localize("PF2ERB.Context.CopiedNotification"));
     } catch (err) {
       console.warn(`${MODULE_ID} | Failed to copy to clipboard`, err);
+    }
+  }
+
+  /**
+   * Roll an inline damage formula and post it to chat directly, bypassing
+   * PF2e's own click handler. `link.dataset.formula` is already the fully
+   * resolved formula (PF2e computed it using the rollData we pass to
+   * enrichHTML), so a plain Foundry Roll is enough — no need to reconstruct
+   * actor/item context ourselves. This trades away the native "Damage Roll"
+   * configuration dialog (editable modifiers, roll visibility, etc.) for a
+   * roll that actually works for compendium content.
+   */
+  async #rollInlineDamage(link) {
+    const formula = link.dataset.formula;
+    if (!formula) return;
+    try {
+      const roll = new Roll(formula);
+      await roll.evaluate();
+      const flavor = link.dataset.name || this.activeTab?.label || undefined;
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker(), flavor });
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Failed to roll inline damage formula "${formula}"`, err);
+      ui.notifications.warn(game.i18n.localize("PF2ERB.InlineRollFailed"));
     }
   }
 

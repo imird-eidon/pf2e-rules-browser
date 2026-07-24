@@ -30,6 +30,8 @@
   "PF2ERB.Context.CopiedNotification": "Link copied to clipboard.",
   "PF2ERB.Context.ClearTabHistory": "Clear this tab's history",
   "PF2ERB.Context.ClearAllHistory": "Clear all tabs' history",
+  "PF2ERB.ScrollTop": "Scroll to top",
+  "PF2ERB.InlineRollFailed": "Couldn't roll this formula.",
   "PF2ERB.Settings.RememberSession.Name": "Remember tab session",
   "PF2ERB.Settings.RememberSession.Hint": "Saves your tabs and histories and restores them when reopening the browser, even after reloading Foundry.",
   "PF2ERB.Compendia": "Compendia (journals)",

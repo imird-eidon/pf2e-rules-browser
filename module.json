@@ -2,7 +2,7 @@
   "id": "pf2e-rules-browser",
   "title": "PF2e Rules Browser",
   "description": "An internal, browser-like reader for all rules content available in your Foundry world: tabbed single-window navigation with per-tab history, link interception (no more window cascades) and a lightweight full-text search across journal compendia.",
-  "version": "0.4.14",
+  "version": "0.4.18",
   "authors": [
     {
       "name": "Álvaro",
@@ -46,7 +46,7 @@
   "changelog": "https://github.com/imird-eidon/pf2e-rules-browser/blob/main/CHANGELOG.md",
   "license": "https://github.com/imird-eidon/pf2e-rules-browser/blob/main/LICENSE",
   "manifest": "https://github.com/imird-eidon/pf2e-rules-browser/releases/latest/download/module.json",
-  "download": "https://github.com/imird-eidon/pf2e-rules-browser/releases/download/0.4.14/module.zip",
+  "download": "https://github.com/imird-eidon/pf2e-rules-browser/releases/download/0.4.18/module.zip",
   "media": [
     {
       "type": "screenshot",
