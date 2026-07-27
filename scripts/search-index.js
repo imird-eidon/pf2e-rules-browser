@@ -98,15 +98,32 @@ export class SearchIndex {
       }
     }
 
-    // Item packs: names only.
+    // Item packs: names plus the lightweight fields the advanced search
+    // facets need. These all come from the pack index (cheap) rather than
+    // loading full documents.
     for (const pack of this.itemPacks()) {
-      const index = await pack.getIndex();
+      const index = await pack.getIndex({
+        fields: [
+          "system.traits.value",
+          "system.traits.rarity",
+          "system.level.value",
+          "system.publication.title",
+          "system.source.value"
+        ]
+      });
       for (const e of index) {
         entries.push({
           name: e.name,
           uuid: e.uuid,
           type: e.type ?? "item",
-          source: pack.title
+          source: pack.title,
+          isItem: true,
+          traits: e.system?.traits?.value ?? [],
+          rarity: e.system?.traits?.rarity ?? null,
+          level: typeof e.system?.level?.value === "number" ? e.system.level.value : null,
+          // Publication field names have shifted across PF2e versions
+          // (system.source.value → system.publication.title), so try both.
+          publication: e.system?.publication?.title || e.system?.source?.value || null
         });
       }
     }
@@ -155,6 +172,89 @@ export class SearchIndex {
       icon: SearchIndex.ICONS[e.type] ?? SearchIndex.ICONS.default
     }));
   }
+
+  /* -------------------------------------------- */
+  /*  Advanced (faceted) search                   */
+  /* -------------------------------------------- */
+
+  /** Every indexed Item entry (advanced search is Item-only: journal pages
+   *  carry no traits/level/rarity, so they can't be faceted). */
+  async itemEntries() {
+    await this.ensureNameIndex();
+    return this.#nameEntries.filter((e) => e.isItem);
+  }
+
+  /**
+   * Faceted search across every indexed item.
+   * @param {object} criteria
+   * @param {string} [criteria.text]      substring match on name
+   * @param {string[]} [criteria.traits]  ALL of these must be present
+   * @param {string} [criteria.type]      item type (feat, spell, action…)
+   * @param {number|null} [criteria.levelMin]
+   * @param {number|null} [criteria.levelMax]
+   * @param {string} [criteria.rarity]
+   * @param {string} [criteria.publication]
+   * @param {string} [criteria.sort]      "name" | "level"
+   * @param {number} [criteria.limit]
+   */
+  async searchAdvanced(criteria = {}) {
+    const {
+      text = "",
+      traits = [],
+      type = "",
+      levelMin = null,
+      levelMax = null,
+      rarity = "",
+      publication = "",
+      sort = "name",
+      limit = 300
+    } = criteria;
+
+    const query = text.trim().toLowerCase();
+    const all = await this.itemEntries();
+
+    const matches = all.filter((e) => {
+      if (query && !e.name.toLowerCase().includes(query)) return false;
+      if (traits.length && !traits.every((t) => e.traits.includes(t))) return false;
+      if (type && e.type !== type) return false;
+      if (rarity && e.rarity !== rarity) return false;
+      if (publication && e.publication !== publication) return false;
+      if (levelMin !== null && (e.level === null || e.level < levelMin)) return false;
+      if (levelMax !== null && (e.level === null || e.level > levelMax)) return false;
+      return true;
+    });
+
+    matches.sort((a, b) => {
+      if (sort === "level") {
+        // Null levels (many actions/conditions) sort last rather than as 0.
+        const al = a.level ?? Number.POSITIVE_INFINITY;
+        const bl = b.level ?? Number.POSITIVE_INFINITY;
+        if (al !== bl) return al - bl;
+      }
+      return a.name.localeCompare(b.name, game.i18n.lang);
+    });
+
+    return { total: matches.length, results: matches.slice(0, limit), limit };
+  }
+
+  /** Distinct values present across indexed items, for building the facets.
+   *  Only what actually exists gets offered, so no dead options. */
+  async facetOptions() {
+    const all = await this.itemEntries();
+    const traits = new Set();
+    const types = new Set();
+    const rarities = new Set();
+    const publications = new Set();
+
+    for (const e of all) {
+      for (const t of e.traits) traits.add(t);
+      if (e.type) types.add(e.type);
+      if (e.rarity) rarities.add(e.rarity);
+      if (e.publication) publications.add(e.publication);
+    }
+    return { traits: [...traits], types: [...types], rarities: [...rarities], publications: [...publications] };
+  }
+
 
   /* -------------------------------------------- */
   /*  Full-text index                             */

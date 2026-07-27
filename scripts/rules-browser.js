@@ -120,6 +120,9 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       setBookmarkFolder: RulesBrowser.#onSetBookmarkFolder,
       togglePin: RulesBrowser.#onTogglePin,
       toggleSection: RulesBrowser.#onToggleSection,
+      toggleFilter: RulesBrowser.#onToggleFilter,
+      advancedSearch: RulesBrowser.#onAdvancedSearch,
+      clearFacets: RulesBrowser.#onClearFacets,
       openPalette: RulesBrowser.#onOpenPalette
     }
   };
@@ -261,6 +264,9 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     if (view.home) {
       tab.label = game.i18n.localize("PF2ERB.Home");
       tab.icon = "fa-solid fa-house";
+    } else if (view.advanced) {
+      tab.label = game.i18n.localize("PF2ERB.Advanced.Title");
+      tab.icon = "fa-solid fa-sliders";
     } else if (view.world) {
       tab.label = game.i18n.localize("PF2ERB.WorldJournals");
       tab.icon = "fa-solid fa-globe";
@@ -607,6 +613,83 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.render({ parts: ["sidebar"] });
   }
 
+  /** Show/hide a section's filter panel. Pure DOM toggling — filtering
+   *  itself never re-renders, it just shows/hides already-rendered <li>s. */
+  static #onToggleFilter(event, target) {
+    event.stopPropagation();
+    const panel = this.element.querySelector(
+      `.rb-filter-panel[data-section-key="${CSS.escape(target.dataset.sectionKey ?? "")}"]`
+    );
+    if (!panel) return;
+    panel.toggleAttribute("hidden");
+    if (!panel.hidden) panel.querySelector(".rb-filter-input")?.focus();
+  }
+
+  /* -------------------------------------------- */
+  /*  Advanced (faceted) search view              */
+  /* -------------------------------------------- */
+
+  /** Current facet state for the advanced search view. Kept on the app
+   *  rather than in tab history so that tweaking a facet doesn't spam
+   *  back/forward entries. */
+  #facets = {
+    text: "",
+    traits: [],
+    type: "",
+    levelMin: null,
+    levelMax: null,
+    rarity: "",
+    publication: "",
+    sort: "name"
+  };
+
+  static async #onAdvancedSearch() {
+    await this.navigateTo({ advanced: true });
+  }
+
+  static async #onClearFacets() {
+    this.#facets = {
+      text: "",
+      traits: [],
+      type: "",
+      levelMin: null,
+      levelMax: null,
+      rarity: "",
+      publication: "",
+      sort: "name"
+    };
+    await this.render({ parts: ["sidebar", "content"] });
+  }
+
+  /** Read every facet control's current value straight from the DOM (the
+   *  DOM is the source of truth while the panel is open), store it, and
+   *  re-render only the results — so text inputs keep focus and caret. */
+  async #syncFacetsFromDom({ renderSidebar = false } = {}) {
+    const root = this.element.querySelector(".rb-facets");
+    if (!root) return;
+    const val = (sel) => root.querySelector(sel)?.value?.trim() ?? "";
+    const num = (sel) => {
+      const raw = val(sel);
+      const n = Number.parseInt(raw, 10);
+      return raw === "" || Number.isNaN(n) ? null : n;
+    };
+
+    this.#facets = {
+      text: val(".rb-adv-input"),
+      traits: [...root.querySelectorAll(".rb-adv-chip")].map((c) => c.dataset.trait),
+      type: val(".rb-facet-type"),
+      levelMin: num(".rb-facet-level-min"),
+      levelMax: num(".rb-facet-level-max"),
+      rarity: val(".rb-facet-rarity"),
+      publication: val(".rb-facet-publication"),
+      sort: val(".rb-facet-sort") || "name"
+    };
+
+    await this.render({ parts: renderSidebar ? ["sidebar", "content"] : ["content"] });
+  }
+
+  #debouncedFacetSync = foundry.utils.debounce(() => this.#syncFacetsFromDom(), 200);
+
   /* -------------------------------------------- */
   /*  Session persistence (per user)              */
   /* -------------------------------------------- */
@@ -710,7 +793,9 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     context.search = await this.#prepareSearch();
 
     const view = this.currentView;
+    this.#currentItemForRoll = null;
     if (view.home) await this.#prepareHome(context, tab);
+    else if (view.advanced) await this.#prepareAdvanced(context, tab);
     else if (view.world) await this.#prepareWorld(context, tab);
     else if (view.pack) await this.#preparePack(context, tab, view.pack);
     else if (view.uuid) await this.#prepareDocument(context, tab, view);
@@ -722,10 +807,14 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     // Bookmarks/Recent stay pinned to the top of the sidebar on every screen
     // (Home included — #prepareHome no longer builds them itself), so they
     // don't get replaced by whatever compendium/journal the current page
-    // happens to belong to.
-    context.sidebar = {
-      sections: [...this.#persistentSidebarSections(), ...context.sidebar.sections]
-    };
+    // happens to belong to. The advanced search view is the exception: its
+    // facets need the whole sidebar.
+    if (!context.sidebar.facets) {
+      context.sidebar = {
+        ...context.sidebar,
+        sections: [...this.#persistentSidebarSections(), ...context.sidebar.sections]
+      };
+    }
 
     return context;
   }
@@ -911,25 +1000,231 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   async #preparePack(context, tab, packId) {
     const pack = game.packs.get(packId);
     if (!pack) return;
-    const index = await pack.getIndex();
-    const items = [...index]
-      .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
-      .map((e) => ({ name: e.name, uuid: e.uuid, icon: "fa-solid fa-book" }));
-
-    // Same key namespace ("pack:<id>") used when landing directly on an item
-    // from that pack (see #prepareItem), so collapsing one keeps the other
-    // consistent.
-    const key = `pack:${packId}`;
-    context.sidebar = {
-      sections: [
-        { key, label: pack.title, items, collapsed: this.getCollapsedSections().has(key) }
-      ]
-    };
+    const section = await this.#buildItemPackSection(pack);
+    context.sidebar = { sections: [section] };
     tab.lastSidebar = context.sidebar;
     context.content = {
       listing: {
         title: pack.title,
-        meta: game.i18n.format("PF2ERB.DocumentCount", { count: items.length })
+        meta: game.i18n.format("PF2ERB.DocumentCount", { count: section.items.length })
+      }
+    };
+  }
+
+  /**
+   * Build a sidebar section listing every document in a compendium pack.
+   * For Item packs (feats, spells, equipment...), each item's traits are
+   * pulled from the index and the section is marked filterable, with a set
+   * of trait pills derived from whatever traits actually appear in *this*
+   * list — not every trait in the game. Shared by #preparePack (browsing a
+   * compendium from Home) and #prepareItem's fallback (landing directly on
+   * an item without having visited its pack first), so both stay in sync.
+   */
+  async #buildItemPackSection(pack, { activeUuid = null } = {}) {
+    const isItemPack = pack.documentName === "Item";
+    const index = await pack.getIndex(isItemPack ? { fields: ["system.traits.value"] } : undefined);
+    const items = [...index]
+      .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
+      .map((e) => ({
+        name: e.name,
+        uuid: e.uuid,
+        icon: "fa-solid fa-book",
+        active: e.uuid === activeUuid,
+        traits: isItemPack ? e.system?.traits?.value ?? [] : undefined
+      }));
+
+    // Same key namespace ("pack:<id>") whether reached by browsing the
+    // compendium or by landing on one of its items directly, so collapsing
+    // (or filtering) in one place stays consistent in the other.
+    const key = `pack:${pack.collection}`;
+    const section = {
+      key,
+      label: pack.title,
+      items,
+      collapsed: this.getCollapsedSections().has(key)
+    };
+    if (isItemPack) {
+      section.filterable = true;
+      section.traitOptions = this.#buildTraitOptions(items);
+    }
+    return section;
+  }
+
+  /** Distinct traits actually present among a set of items, localized and
+   *  alphabetized — used to build the filter's trait pills. */
+  #buildTraitOptions(items) {
+    const slugs = new Set();
+    for (const item of items) for (const t of item.traits ?? []) slugs.add(t);
+    return [...slugs]
+      .map((slug) => ({ slug, label: this.#localizeTraitSlug(slug) }))
+      .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
+  }
+
+  /** Best-effort localization for a trait slug, trying every trait
+   *  dictionary PF2e commonly keeps traits under. Falls back to the raw
+   *  slug if none of them recognize it. */
+  #localizeTraitSlug(slug) {
+    const pf2e = CONFIG.PF2E ?? {};
+    const key =
+      pf2e.actionTraits?.[slug] ??
+      pf2e.featTraits?.[slug] ??
+      pf2e.weaponTraits?.[slug] ??
+      pf2e.spellTraits?.[slug] ??
+      pf2e.npcAttackTraits?.[slug] ??
+      pf2e.equipmentTraits?.[slug] ??
+      pf2e.consumableTraits?.[slug] ??
+      pf2e.traits?.[slug] ??
+      slug;
+    return game.i18n.localize(key);
+  }
+
+  /** Same autocomplete behavior as the per-list filter, for the advanced
+   *  search facet panel (which keeps its own markup so the two don't fight
+   *  over selectors). */
+  #updateAdvancedSuggestions(input) {
+    const box = input.parentElement?.querySelector(".rb-adv-suggestions");
+    if (!box) return;
+    const query = input.value.trim().toLowerCase();
+    let anyVisible = false;
+    for (const suggestion of box.querySelectorAll(".rb-adv-suggestion")) {
+      const matches = query.length >= 1 && suggestion.dataset.label.toLowerCase().includes(query);
+      suggestion.hidden = !matches;
+      suggestion.classList.remove("active");
+      if (matches) anyVisible = true;
+    }
+    box.hidden = !anyVisible;
+  }
+
+
+  #updateTraitSuggestions(input) {
+    const panel = input.closest(".rb-filter-panel");
+    const box = panel?.querySelector(".rb-filter-suggestions");
+    if (!box) return;
+
+    const query = input.value.trim().toLowerCase();
+    const active = new Set(
+      [...panel.querySelectorAll(".rb-filter-chip")].map((c) => c.dataset.trait)
+    );
+
+    let anyVisible = false;
+    for (const suggestion of box.querySelectorAll(".rb-filter-suggestion")) {
+      const matches =
+        query.length >= 1 &&
+        !active.has(suggestion.dataset.trait) &&
+        suggestion.dataset.label.toLowerCase().includes(query);
+      suggestion.hidden = !matches;
+      suggestion.classList.remove("active");
+      if (matches) anyVisible = true;
+    }
+    box.hidden = !anyVisible;
+  }
+
+  /** Turn a trait into an active, removable chip and re-apply the filter. */
+  #addTraitChip(panel, slug, label) {
+    if (!panel || !slug) return;
+    const chips = panel.querySelector(".rb-filter-chips");
+    if (!chips || chips.querySelector(`[data-trait="${CSS.escape(slug)}"]`)) return;
+
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "rb-filter-chip";
+    chip.dataset.trait = slug;
+    chip.dataset.tooltip = game.i18n.localize("PF2ERB.Filter.RemoveTrait");
+    const text = document.createElement("span");
+    text.textContent = label ?? slug; // textContent, never innerHTML — labels are external data
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-xmark";
+    chip.append(text, icon);
+    chips.appendChild(chip);
+
+    const input = panel.querySelector(".rb-filter-input");
+    if (input) input.value = "";
+    const box = panel.querySelector(".rb-filter-suggestions");
+    if (box) box.hidden = true;
+
+    this.#applySectionFilter(panel);
+    input?.focus();
+  }
+
+  /** Show/hide a filterable section's <li>s based on its text input and any
+   *  active trait chips (combined with AND logic). Pure DOM manipulation —
+   *  every item is already rendered, this only toggles the `hidden`
+   *  attribute, so it stays fast even on a 6000+ item compendium. */
+  #applySectionFilter(panel) {
+    if (!panel) return;
+    const list = this.element.querySelector(
+      `.rb-list[data-section-key="${CSS.escape(panel.dataset.sectionKey ?? "")}"]`
+    );
+    if (!list) return;
+
+    const text = panel.querySelector(".rb-filter-input")?.value.trim().toLowerCase() ?? "";
+    const activeTraits = [...panel.querySelectorAll(".rb-filter-chip")].map(
+      (c) => c.dataset.trait
+    );
+
+    for (const li of list.querySelectorAll("li")) {
+      const name = li.querySelector(".rb-item-name")?.textContent.toLowerCase() ?? "";
+      const traits = (li.dataset.traits ?? "").split(",").filter(Boolean);
+      const matchesText = !text || name.includes(text);
+      const matchesTraits = activeTraits.every((t) => traits.includes(t));
+      li.hidden = !(matchesText && matchesTraits);
+    }
+  }
+
+  async #prepareAdvanced(context, tab) {
+    const [options, { total, results, limit }] = await Promise.all([
+      this.index.facetOptions(),
+      this.index.searchAdvanced(this.#facets)
+    ]);
+
+    const selectedTraits = new Set(this.#facets.traits);
+    const localizedTraits = options.traits
+      .map((slug) => ({ slug, label: this.#localizeTraitSlug(slug) }))
+      .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
+
+    context.sidebar = {
+      facets: {
+        ...this.#facets,
+        chips: this.#facets.traits.map((slug) => ({
+          slug,
+          label: this.#localizeTraitSlug(slug)
+        })),
+        traitOptions: localizedTraits.filter((t) => !selectedTraits.has(t.slug)),
+        typeOptions: options.types
+          .map((type) => ({
+            value: type,
+            label: game.i18n.localize(`TYPES.Item.${type}`) || type,
+            selected: this.#facets.type === type
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang)),
+        rarityOptions: options.rarities
+          .map((rarity) => ({
+            value: rarity,
+            label: game.i18n.localize(CONFIG.PF2E?.rarityTraits?.[rarity] ?? rarity),
+            selected: this.#facets.rarity === rarity
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang)),
+        publicationOptions: options.publications
+          .map((pub) => ({ value: pub, label: pub, selected: this.#facets.publication === pub }))
+          .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang)),
+        sortByLevel: this.#facets.sort === "level"
+      }
+    };
+
+    context.content = {
+      advanced: {
+        total,
+        truncated: total > results.length,
+        limit,
+        rows: results.map((e) => ({
+          uuid: e.uuid,
+          name: e.name,
+          level: e.level,
+          icon: SearchIndex.ICONS[e.type] ?? SearchIndex.ICONS.default,
+          typeLabel: game.i18n.localize(`TYPES.Item.${e.type}`) || e.type,
+          publication: e.publication,
+          traits: e.traits.map((slug) => this.#localizeTraitSlug(slug))
+        }))
       }
     };
   }
@@ -1022,29 +1317,17 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async #prepareItem(context, tab, item) {
+    this.#currentItemForRoll = item;
+
     // Keep whatever contextual sidebar we had (pack listing, journal
     // pages...). If there isn't one — e.g. a background tab opened directly
     // to this item via middle-click, a bookmark, the command palette, or
     // "recently viewed", never having "visited" its containing pack — build
     // one from the item's own compendium pack instead of leaving it empty.
     if (item.pack) {
-      const key = `pack:${item.pack}`;
       const pack = game.packs.get(item.pack);
       if (pack) {
-        const index = await pack.getIndex();
-        const items = [...index]
-          .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
-          .map((e) => ({
-            name: e.name,
-            uuid: e.uuid,
-            icon: "fa-solid fa-book",
-            active: e.uuid === item.uuid
-          }));
-        tab.lastSidebar = {
-          sections: [
-            { key, label: pack.title, items, collapsed: this.getCollapsedSections().has(key) }
-          ]
-        };
+        tab.lastSidebar = { sections: [await this.#buildItemPackSection(pack, { activeUuid: item.uuid })] };
       }
     }
     context.sidebar = tab.lastSidebar ?? { sections: [] };
@@ -1256,6 +1539,160 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!event.target.closest("input.rb-search")) return;
       const first = this.element.querySelector(".rb-sidebar a[data-uuid]");
       if (first) this.navigateTo({ uuid: first.dataset.uuid });
+    });
+
+    // 7) Section filter: typing drives both name filtering and the trait
+    //    autocomplete suggestions.
+    this.element.addEventListener("input", (event) => {
+      const input = event.target.closest(".rb-filter-input");
+      if (!input) return;
+      this.#updateTraitSuggestions(input);
+      this.#applySectionFilter(input.closest(".rb-filter-panel"));
+    });
+
+    // 8) Section filter: clicking a suggestion turns it into a chip;
+    //    clicking a chip removes it.
+    this.element.addEventListener("click", (event) => {
+      const suggestion = event.target.closest(".rb-filter-suggestion");
+      if (suggestion) {
+        this.#addTraitChip(
+          suggestion.closest(".rb-filter-panel"),
+          suggestion.dataset.trait,
+          suggestion.dataset.label
+        );
+        return;
+      }
+      const chip = event.target.closest(".rb-filter-chip");
+      if (chip) {
+        const panel = chip.closest(".rb-filter-panel");
+        chip.remove();
+        this.#applySectionFilter(panel);
+      }
+    });
+
+    // 9) Section filter keyboard handling: arrows move through suggestions,
+    //    Enter picks one (or opens the single remaining result if there are
+    //    no suggestions open), Escape dismisses the dropdown.
+    this.element.addEventListener("keydown", (event) => {
+      const input = event.target.closest(".rb-filter-input");
+      if (!input) return;
+      const panel = input.closest(".rb-filter-panel");
+      const box = panel?.querySelector(".rb-filter-suggestions");
+      const visible = [...(box?.querySelectorAll(".rb-filter-suggestion") ?? [])].filter(
+        (s) => !s.hidden
+      );
+
+      if (event.key === "Escape") {
+        if (box) box.hidden = true;
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (!visible.length) return;
+        event.preventDefault();
+        const current = visible.findIndex((s) => s.classList.contains("active"));
+        const next =
+          event.key === "ArrowDown"
+            ? (current + 1) % visible.length
+            : (current - 1 + visible.length) % visible.length;
+        for (const s of visible) s.classList.remove("active");
+        visible[next].classList.add("active");
+        visible[next].scrollIntoView({ block: "nearest" });
+        return;
+      }
+
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+
+      // A suggestion is showing → commit it as a trait chip.
+      if (box && !box.hidden && visible.length) {
+        const chosen = visible.find((s) => s.classList.contains("active")) ?? visible[0];
+        this.#addTraitChip(panel, chosen.dataset.trait, chosen.dataset.label);
+        return;
+      }
+
+      // Otherwise, if the filter narrowed things to exactly one item, open it.
+      const list = this.element.querySelector(
+        `.rb-list[data-section-key="${CSS.escape(panel?.dataset.sectionKey ?? "")}"]`
+      );
+      const remaining = [...(list?.querySelectorAll("li") ?? [])].filter((li) => !li.hidden);
+      if (remaining.length === 1) {
+        const uuid = remaining[0].querySelector("a[data-uuid]")?.dataset.uuid;
+        if (uuid) this.navigateTo({ uuid });
+      }
+    });
+
+    // 10) Advanced search facets: text box (name filter + trait autocomplete).
+    this.element.addEventListener("input", (event) => {
+      const input = event.target.closest(".rb-adv-input");
+      if (!input) return;
+      this.#updateAdvancedSuggestions(input);
+      this.#debouncedFacetSync();
+    });
+
+    // 11) Advanced search facets: selects and number inputs.
+    this.element.addEventListener("change", (event) => {
+      if (!event.target.closest(".rb-facet")) return;
+      this.#syncFacetsFromDom();
+    });
+
+    // 12) Advanced search facets: picking a trait suggestion, removing a chip.
+    this.element.addEventListener("click", (event) => {
+      const suggestion = event.target.closest(".rb-adv-suggestion");
+      if (suggestion) {
+        this.#facets = {
+          ...this.#facets,
+          traits: [...new Set([...this.#facets.traits, suggestion.dataset.trait])],
+          text: ""
+        };
+        this.render({ parts: ["sidebar", "content"] });
+        return;
+      }
+      const chip = event.target.closest(".rb-adv-chip");
+      if (chip) {
+        this.#facets = {
+          ...this.#facets,
+          traits: this.#facets.traits.filter((t) => t !== chip.dataset.trait)
+        };
+        this.render({ parts: ["sidebar", "content"] });
+      }
+    });
+
+    // 13) Advanced search facets: keyboard handling for the suggestions.
+    this.element.addEventListener("keydown", (event) => {
+      const input = event.target.closest(".rb-adv-input");
+      if (!input) return;
+      const box = input.parentElement.querySelector(".rb-adv-suggestions");
+      const visible = [...(box?.querySelectorAll(".rb-adv-suggestion") ?? [])].filter(
+        (s) => !s.hidden
+      );
+
+      if (event.key === "Escape") {
+        if (box) box.hidden = true;
+        return;
+      }
+      if ((event.key === "ArrowDown" || event.key === "ArrowUp") && visible.length) {
+        event.preventDefault();
+        const current = visible.findIndex((s) => s.classList.contains("active"));
+        const next =
+          event.key === "ArrowDown"
+            ? (current + 1) % visible.length
+            : (current - 1 + visible.length) % visible.length;
+        for (const s of visible) s.classList.remove("active");
+        visible[next].classList.add("active");
+        visible[next].scrollIntoView({ block: "nearest" });
+        return;
+      }
+      if (event.key === "Enter" && box && !box.hidden && visible.length) {
+        event.preventDefault();
+        const chosen = visible.find((s) => s.classList.contains("active")) ?? visible[0];
+        this.#facets = {
+          ...this.#facets,
+          traits: [...new Set([...this.#facets.traits, chosen.dataset.trait])],
+          text: ""
+        };
+        this.render({ parts: ["sidebar", "content"] });
+      }
     });
   }
 
@@ -1592,6 +2029,11 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  /** The item currently being viewed, if any — tracked so an inline damage
+   *  roll can build a flavor with its icon and name. Reset before every
+   *  render and re-set by #prepareItem when applicable. */
+  #currentItemForRoll = null;
+
   /**
    * Roll an inline damage formula and post it to chat directly, bypassing
    * PF2e's own click handler. `link.dataset.formula` is already the fully
@@ -1602,15 +2044,41 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
    * roll that actually works for compendium content.
    */
   async #rollInlineDamage(link) {
-    const formula = link.dataset.formula;
-    if (!formula) return;
+    const rawFormula = link.dataset.formula;
+    if (!rawFormula) return;
     try {
-      const roll = new Roll(formula);
+      // PF2e's own formula syntax wraps grouped instances in {...} and tags
+      // each term with [type,category] (e.g. "{1d6[acid,persistent]}").
+      // Foundry's default chat card just prints roll.formula verbatim, so
+      // without cleanup the card shows that raw syntax instead of something
+      // readable. Strip it for a bare, evaluatable expression, and surface
+      // the tags separately as a plain-language line instead.
+      const tags = [...rawFormula.matchAll(/\[([^\]]+)\]/g)]
+        .flatMap((m) => m[1].split(","))
+        .map((t) => t.trim())
+        .filter((t, i, arr) => t && arr.indexOf(t) === i);
+      const bareFormula =
+        rawFormula
+          .replace(/^\{|\}$/g, "")
+          .replace(/\[[^\]]*\]/g, "")
+          .trim() || rawFormula;
+
+      const roll = new Roll(bareFormula);
       await roll.evaluate();
-      const flavor = link.dataset.name || this.activeTab?.label || undefined;
+
+      const item = this.#currentItemForRoll;
+      const label = link.dataset.name || item?.name || this.activeTab?.label || "";
+      const flavor = `
+        <div class="pf2erb-roll-flavor">
+          ${item?.img ? `<img src="${item.img}" alt="">` : ""}
+          <span>${label}</span>
+        </div>
+        ${tags.length ? `<div class="pf2erb-roll-tags">${tags.join(", ")}</div>` : ""}
+      `.trim();
+
       await roll.toMessage({ speaker: ChatMessage.getSpeaker(), flavor });
     } catch (err) {
-      console.warn(`${MODULE_ID} | Failed to roll inline damage formula "${formula}"`, err);
+      console.warn(`${MODULE_ID} | Failed to roll inline damage formula "${rawFormula}"`, err);
       ui.notifications.warn(game.i18n.localize("PF2ERB.InlineRollFailed"));
     }
   }

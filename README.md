@@ -4,6 +4,27 @@ An internal, browser-like reader for all the rules content available inside your
 
 Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agnostic, but item rendering and trait styling assume PF2e).
 
+## Features (v0.5.0)
+
+- **Advanced search.** A faceted search view (sliders button in the toolbar) that opens in its own tab, with facets in the sidebar and results in the main pane:
+  - **Traits** with the same autocomplete-and-chips UX as the per-list filter, combinable with AND logic.
+  - **Item type** (feat, spell, action, equipment…), **level range**, **rarity** and **source**, all built only from values actually present in your installed content.
+  - **Sort** by name or level; result rows show level, type, traits and source inline for scanning; a result count with a "clear filters" button.
+  - Facet changes re-render only the results, so typing keeps focus and stays responsive.
+- **Scope note:** advanced search is **Item-only** (feats, spells, actions, equipment, conditions…). Journal pages — class descriptions, rules glossary and similar — carry no traits, level or rarity in Foundry, so they can't be faceted; they remain fully searchable via the normal search box (titles + full text).
+
+## Features (v0.4.22)
+
+- **Per-list filter for compendium item listings** (e.g. "Feats", 6044 documents). Click the filter icon next to a section header to reveal it, then type: the box filters items by name *and* autocompletes matching trait names as you go. Picking a trait adds it as a removable chip, and multiple chips combine with AND logic (e.g. Manipulate + Secret at once). Arrow keys move through suggestions, Enter picks one, Escape dismisses the dropdown; with no suggestions open and exactly one item left, Enter opens it. Hidden by default so it stays out of the way on shorter lists, and filtering is pure client-side DOM work (no re-render), so it stays fast on the largest compendiums.
+
+## Bugfix (v0.4.20)
+
+- Fixed the inline damage-roll chat message showing PF2e's raw formula syntax verbatim (e.g. "{1d6[acid,persistent]}") instead of a clean roll. The grouping braces and per-term `[type,category]` tags are now stripped before rolling, with the tags shown separately as a plain-language line ("acid, persistent") under the item name/icon.
+
+## Features (v0.4.19)
+
+- The inline damage-roll chat message now shows the item's icon and name instead of plain default flavor text.
+
 ## Bugfix (v0.4.18)
 
 - Fixed inline damage-roll buttons (e.g. persistent damage) doing nothing and throwing a console error ("Failed to parse damage formula {}"). PF2e's own click handler resolves item context via a native sheet or, failing that, a non-compendium UUID — it explicitly skips that fallback for any UUID starting with "Compendium.", which is most of what this module displays. These clicks are now handled directly instead: the formula is already correctly resolved in the link (thanks to the rollData fix in 0.4.17), so it's rolled and posted to chat without needing PF2e's own resolution to succeed. This trades away the native configurable "Damage Roll" dialog (editable modifiers, roll visibility, etc.) for a roll that reliably works on unowned compendium content.

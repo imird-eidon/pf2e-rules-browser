@@ -247,6 +247,132 @@
     padding-left: 0.4rem;
 }
 
+.pf2e-rules-browser .rb-filter-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-left: 0.35rem;
+    border-radius: 50%;
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+.pf2e-rules-browser .rb-filter-toggle:hover {
+    opacity: 1;
+    background: rgb(128 128 128 / 30%);
+}
+
+.pf2e-rules-browser .rb-filter-panel {
+    padding: 0.4rem 0.2rem 0.5rem;
+    border-bottom: 1px solid rgb(255 255 255 / 8%);
+    margin-bottom: 0.2rem;
+}
+
+.pf2e-rules-browser .rb-filter-inputwrap,
+.pf2e-rules-browser .rb-adv-inputwrap {
+    position: relative;
+}
+
+.pf2e-rules-browser .rb-filter-input,
+.pf2e-rules-browser .rb-adv-input {
+    width: 100%;
+    height: 1.8rem;
+    font-size: var(--font-size-12, 0.75rem);
+}
+
+/* Active trait filters, shown as removable chips above the input. */
+.pf2e-rules-browser .rb-filter-chips,
+.pf2e-rules-browser .rb-adv-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.pf2e-rules-browser .rb-filter-chips:not(:empty),
+.pf2e-rules-browser .rb-adv-chips:not(:empty) {
+    margin-bottom: 0.35rem;
+}
+
+.pf2e-rules-browser .rb-filter-chip,
+.pf2e-rules-browser .rb-adv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: var(--font-size-11, 0.6875rem);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid #d4a017;
+    background: #d4a017;
+    color: #1c1714;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1.4;
+    width: auto;
+}
+
+.pf2e-rules-browser .rb-filter-chip:hover,
+.pf2e-rules-browser .rb-adv-chip:hover {
+    filter: brightness(1.1);
+}
+
+.pf2e-rules-browser .rb-filter-chip i,
+.pf2e-rules-browser .rb-adv-chip i {
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+/* Trait autocomplete dropdown. */
+.pf2e-rules-browser .rb-filter-suggestions,
+.pf2e-rules-browser .rb-adv-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    max-height: 12rem;
+    overflow-y: auto;
+    background: #1c1714;
+    border: 1px solid rgb(255 255 255 / 15%);
+    border-radius: 4px;
+    box-shadow: 0 6px 20px rgb(0 0 0 / 50%);
+    margin-top: 2px;
+}
+
+.pf2e-rules-browser .rb-filter-suggestion,
+.pf2e-rules-browser .rb-adv-suggestion {
+    padding: 0.3rem 0.5rem;
+    font-size: var(--font-size-12, 0.75rem);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    color: #d8d0c5;
+}
+
+.pf2e-rules-browser .rb-filter-suggestion:hover,
+.pf2e-rules-browser .rb-filter-suggestion.active,
+.pf2e-rules-browser .rb-adv-suggestion:hover,
+.pf2e-rules-browser .rb-adv-suggestion.active {
+    background: rgb(212 160 23 / 22%);
+}
+
+/* The `hidden` attribute maps to `display: none` in the browser's default
+   stylesheet, which loses to ANY author rule setting display — including
+   our own `.rb-list li { display: flex }` above. Without this, filtered-out
+   items would stay visible. */
+.pf2e-rules-browser .rb-list li[hidden],
+.pf2e-rules-browser .rb-filter-suggestion[hidden],
+.pf2e-rules-browser .rb-adv-suggestion[hidden],
+.pf2e-rules-browser .rb-adv-suggestions[hidden],
+.pf2e-rules-browser .rb-filter-suggestions[hidden],
+.pf2e-rules-browser .rb-filter-panel[hidden] {
+    display: none !important;
+}
+
 .pf2e-rules-browser .rb-list {
     list-style: none;
     margin: 0;
@@ -512,6 +638,28 @@
 .chat-message .pf2erb-share .pf2erb-open-link {
     width: 100%;
     margin-top: 0.25rem;
+}
+
+/* ------------------------------------------- Inline damage-roll flavor */
+.chat-message .pf2erb-roll-flavor {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.chat-message .pf2erb-roll-flavor img {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: none;
+    border-radius: 3px;
+    flex: 0 0 auto;
+}
+
+.chat-message .pf2erb-roll-tags {
+    font-size: var(--font-size-11, 0.6875rem);
+    text-transform: capitalize;
+    opacity: 0.75;
+    margin-top: 0.1rem;
 }
 
 .pf2e-rules-browser .rb-toc {
@@ -790,4 +938,116 @@
     height: 1px;
     background: rgb(255 255 255 / 12%);
     margin: 0.25rem 0.3rem;
+}
+
+/* ------------------------------------------------ Advanced search facets */
+.pf2e-rules-browser .rb-facet-clear {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 50%;
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+.pf2e-rules-browser .rb-facet-clear:hover {
+    opacity: 1;
+    background: rgb(128 128 128 / 30%);
+}
+
+.pf2e-rules-browser .rb-facets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0 0.2rem;
+}
+
+.pf2e-rules-browser .rb-facet-label {
+    font-size: var(--font-size-11, 0.6875rem);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+    margin-top: 0.5rem;
+}
+
+.pf2e-rules-browser .rb-facets select,
+.pf2e-rules-browser .rb-facets input[type="number"] {
+    width: 100%;
+    height: 1.7rem;
+    font-size: var(--font-size-12, 0.75rem);
+}
+
+.pf2e-rules-browser .rb-facet-range {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pf2e-rules-browser .rb-facet-range span {
+    opacity: 0.5;
+}
+
+/* ----------------------------------------------- Advanced search results */
+.pf2e-rules-browser .rb-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pf2e-rules-browser .rb-results li {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.pf2e-rules-browser .rb-results li:hover {
+    background: rgb(255 255 255 / 4%);
+}
+
+.pf2e-rules-browser .rb-results li > a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.pf2e-rules-browser .rb-results li > a > i {
+    flex: 0 0 1rem;
+    text-align: center;
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.pf2e-rules-browser .rb-result-name {
+    font-weight: bold;
+}
+
+.pf2e-rules-browser .rb-result-level {
+    font-size: var(--font-size-11, 0.6875rem);
+    background: rgb(255 255 255 / 10%);
+    border-radius: 3px;
+    padding: 0 0.35rem;
+}
+
+.pf2e-rules-browser .rb-result-type {
+    margin-left: auto;
+    font-size: var(--font-size-11, 0.6875rem);
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.pf2e-rules-browser .rb-result-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    margin: 0.3rem 0 0 1.5rem;
+}
+
+.pf2e-rules-browser .rb-result-source {
+    margin: 0.2rem 0 0 1.5rem;
+    font-size: var(--font-size-11, 0.6875rem);
+    opacity: 0.5;
 }

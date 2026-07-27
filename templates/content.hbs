@@ -3,6 +3,42 @@
         <i class="fa-solid fa-arrow-up"></i>
     </button>
 
+    {{#if content.advanced}}
+    <header class="rb-doc-header">
+        <div class="rb-doc-titles">
+            <h1>{{localize "PF2ERB.Advanced.Title"}}</h1>
+            <span class="rb-meta">
+                {{localize "PF2ERB.Advanced.ResultCount"}}: {{content.advanced.total}}
+                {{#if content.advanced.truncated}}
+                — {{localize "PF2ERB.Advanced.Truncated"}} {{content.advanced.limit}}
+                {{/if}}
+            </span>
+        </div>
+    </header>
+    {{#if content.advanced.rows.length}}
+    <ol class="rb-results">
+        {{#each content.advanced.rows}}
+        <li>
+            <a data-action="navigate" data-uuid="{{this.uuid}}">
+                <i class="{{this.icon}}"></i>
+                <span class="rb-result-name">{{this.name}}</span>
+                {{#if this.level}}<span class="rb-result-level">{{this.level}}</span>{{/if}}
+                <span class="rb-result-type">{{this.typeLabel}}</span>
+            </a>
+            {{#if this.traits.length}}
+            <div class="rb-result-traits">
+                {{#each this.traits}}<span class="rb-trait">{{this}}</span>{{/each}}
+            </div>
+            {{/if}}
+            {{#if this.publication}}<div class="rb-result-source">{{this.publication}}</div>{{/if}}
+        </li>
+        {{/each}}
+    </ol>
+    {{else}}
+    <p class="rb-hint">{{localize "PF2ERB.NoResults"}}</p>
+    {{/if}}
+    {{/if}}
+
     {{#if content.welcome}}
     <div class="rb-welcome">
         <i class="fa-solid fa-book-open-reader"></i>

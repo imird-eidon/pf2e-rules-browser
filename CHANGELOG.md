@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.0
+
+- **Advanced search**: a new faceted search view (toolbar sliders button), living in its own tab with facets in the sidebar and results in the main pane. Filter across every indexed item at once by trait (autocomplete + combinable chips, AND logic), item type, level range, rarity and source, with sorting by name or level. Results show level, type, traits and source inline so you can scan without opening anything; clicking one opens it as normal.
+- The global name index now also stores each item's traits, level, rarity and publication (all from the lightweight pack index, no full document loads).
+- Note: advanced search covers **Items** only — journal pages (class descriptions, rules glossary) carry no traits/level/rarity, so they can't be faceted. They remain fully searchable through the normal search box.
+
+## 0.4.22
+
+- Reworked the list filter's trait selection: instead of rendering every trait in the list as a wall of pills (unusable on packs with hundreds of traits), the text box now autocompletes trait names as you type. Picking one adds it as a removable chip, and multiple chips combine with AND logic. Arrow keys navigate suggestions, Enter picks one, Escape dismisses.
+- The text box now filters by name *and* offers matching traits, so typing "acid" surfaces the Acid trait rather than only matching item names.
+- Fixed a latent bug where filtered-out items could stay visible: the `hidden` attribute's default `display: none` loses to any author CSS rule, and the list items already had `display: flex`.
+
+## 0.4.21
+
+- Added a per-list filter for compendium item listings (e.g. "Feats", 6044 documents): toggle it open with the filter icon next to the section header, type to filter by name instantly, and combine it with trait pills (built only from traits actually present in that list) using AND logic. Hidden by default so it doesn't clutter shorter lists. Enter opens the result when exactly one is left visible.
+
+## 0.4.20
+
+- Fixed the inline damage-roll chat message showing PF2e's raw formula syntax verbatim (e.g. "{1d6[acid,persistent]}") instead of a clean roll. The grouping braces and per-term [type,category] tags are now stripped before rolling, with the tags shown separately as a plain-language line ("acid, persistent") under the item name.
+
+## 0.4.19
+
+- The inline damage-roll chat message (added in 0.4.18) now shows the item's icon and name instead of plain default flavor text. Note: a separate console warning about a deprecated `renderChatMessage` hook is unrelated — it's a Foundry-wide notice fired by any chat message right now, not something this module causes or can address.
+
 ## 0.4.18
 
 - Fixed inline damage-roll buttons (e.g. persistent damage) doing nothing / throwing a console error ("Failed to parse damage formula {}"). PF2e's own click handler resolves item context via a native sheet or a non-compendium UUID — it explicitly skips that resolution for any "Compendium." UUID, which is most of what this module shows. These clicks are now handled directly: rolled with the formula already correctly baked into the link (via the rollData fix from 0.4.17) and posted to chat, bypassing PF2e's broken fallback. Trades away the native configurable "Damage Roll" dialog for a roll that actually works.
