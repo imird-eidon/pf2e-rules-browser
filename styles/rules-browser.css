@@ -941,8 +941,8 @@
 }
 
 /* ------------------------------------------------ Advanced search facets */
+.pf2e-rules-browser .rb-facet-save,
 .pf2e-rules-browser .rb-facet-clear {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -953,6 +953,11 @@
     cursor: pointer;
 }
 
+.pf2e-rules-browser .rb-facet-save {
+    margin-left: auto;
+}
+
+.pf2e-rules-browser .rb-facet-save:hover,
 .pf2e-rules-browser .rb-facet-clear:hover {
     opacity: 1;
     background: rgb(128 128 128 / 30%);

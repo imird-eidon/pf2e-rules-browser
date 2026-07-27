@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.3
+
+- The item detail page now always shows rarity, including "Common" — reverting the previous "hide Common" convention for clarity, especially for less experienced players double-checking what they're looking at.
+
+## 0.5.2
+
+- Fixed advanced search results never showing rarity at all — the facet filtered by it, but nothing in the row confirmed it. Now shown (including "Common") as the first badge on each row. Note: the item detail page still hides "Common" specifically, matching PF2e's own convention of only marking rarities that stand out (Uncommon, Rare, Unique).
+
+## 0.5.1
+
+- Advanced search results can now be saved as bookmarks. Click the save icon next to "Advanced Search" (name pre-filled with a readable summary like "Manipulate, Secret · lvl ≤4", editable). Saved searches appear in the Bookmarks section like any other bookmark — can be organized into folders, renamed, removed — and clicking one loads its exact facet combination and re-runs it. The tab shows the saved search's own name instead of a generic title.
+
 ## 0.5.0
 
 - **Advanced search**: a new faceted search view (toolbar sliders button), living in its own tab with facets in the sidebar and results in the main pane. Filter across every indexed item at once by trait (autocomplete + combinable chips, AND logic), item type, level range, rarity and source, with sorting by name or level. Results show level, type, traits and source inline so you can scan without opening anything; clicking one opens it as normal.

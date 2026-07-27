@@ -23,7 +23,7 @@ Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agn
 - Type in the sidebar search box for instant title matches, plus a lazily-built full-text search across your journals.
 - Press `Ctrl+K` (or the lightning-bolt toolbar button) for a **command palette**: a quick-jump overlay to any document by name.
 - Browsing a compendium list (e.g. a class's feats)? Click the **filter icon** next to the section header to filter that list by name, with trait autocomplete and combinable chips.
-- The **sliders button** in the toolbar opens **Advanced Search**: filter every indexed item at once by trait, type, level range, rarity and source, sorted by name or level. (Items only — journal pages like class descriptions have no traits/level to filter by.)
+- The **sliders button** in the toolbar opens **Advanced Search**: filter every indexed item at once by trait, type, level range, rarity and source, sorted by name or level. (Items only — journal pages like class descriptions have no traits/level to filter by.) Click the **save icon** there to bookmark the current combination of facets under its own name, for a recurring lookup you don't want to rebuild every time.
 
 ### Keeping track of things
 - The **star** button bookmarks the current page; bookmarks show at the top of the sidebar on every screen, with optional folders (right-click a bookmark → assign a folder, e.g. to group everything for one adventure).
@@ -46,6 +46,18 @@ Built for **Foundry V13/V14** with the **PF2e** system (most of it is system-agn
 | `Alt+F` | Focus the search box |
 
 All of the above are remappable in Foundry's **Controls** settings.
+
+## Features (v0.5.3)
+
+- The item detail page now always shows rarity, including "Common" — clearer for players double-checking what they're looking at, at the cost of a bit more visual noise for the common (most frequent) case.
+
+## Bugfix (v0.5.2)
+
+- Advanced search results now show rarity on every row (including "Common") — previously the facet filtered by it, but no row confirmed it.
+
+## Features (v0.5.1)
+
+- **Save an advanced search as a bookmark.** Click the save icon next to "Advanced Search" — the name field is pre-filled with a readable summary of the active facets (e.g. "Manipulate, Secret · lvl ≤4"), editable before saving. Saved searches live in the Bookmarks section like any other bookmark (folders, rename, remove all work the same), and clicking one reloads and re-runs its exact facet combination. Handy for a recurring lookup like "every Manipulate feat at level 4 or below."
 
 ## Features (v0.5.0)
 

@@ -25,7 +25,12 @@
                 {{#if this.level}}<span class="rb-result-level">{{this.level}}</span>{{/if}}
                 <span class="rb-result-type">{{this.typeLabel}}</span>
             </a>
-            {{#if this.traits.length}}
+            {{#if this.rarity}}
+            <div class="rb-result-traits">
+                <span class="rb-trait rarity">{{this.rarity}}</span>
+                {{#each this.traits}}<span class="rb-trait">{{this}}</span>{{/each}}
+            </div>
+            {{else if this.traits.length}}
             <div class="rb-result-traits">
                 {{#each this.traits}}<span class="rb-trait">{{this}}</span>{{/each}}
             </div>

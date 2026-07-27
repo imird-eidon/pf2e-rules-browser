@@ -45,6 +45,9 @@
     {{else if sidebar.facets}}
         <h3>
             <i class="fa-solid fa-sliders"></i> {{localize "PF2ERB.Advanced.Title"}}
+            <a class="rb-facet-save" data-action="saveSearch" data-tooltip="PF2ERB.Advanced.Save">
+                <i class="fa-solid fa-floppy-disk"></i>
+            </a>
             <a class="rb-facet-clear" data-action="clearFacets" data-tooltip="PF2ERB.Advanced.Clear">
                 <i class="fa-solid fa-rotate-left"></i>
             </a>
@@ -153,7 +156,8 @@
                 <a data-action="navigate"
                    {{#if this.uuid}}data-uuid="{{this.uuid}}"{{/if}}
                    {{#if this.pack}}data-pack="{{this.pack}}"{{/if}}
-                   {{#if this.view}}data-view="{{this.view}}"{{/if}}>
+                   {{#if this.view}}data-view="{{this.view}}"{{/if}}
+                   {{#if this.facetsJson}}data-facets="{{this.facetsJson}}"{{/if}}>
                     {{#if this.icon}}<i class="{{this.icon}}"></i>{{/if}}
                     <span class="rb-item-name">{{this.name}}</span>
                 </a>

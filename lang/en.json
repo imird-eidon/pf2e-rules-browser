@@ -82,5 +82,9 @@
   "PF2ERB.Advanced.SortName": "Name",
   "PF2ERB.Advanced.SortLevel": "Level",
   "PF2ERB.Advanced.ResultCount": "Results",
-  "PF2ERB.Advanced.Truncated": "showing the first"
+  "PF2ERB.Advanced.Truncated": "showing the first",
+  "PF2ERB.Advanced.Save": "Save this search as a bookmark",
+  "PF2ERB.Advanced.SaveDialogTitle": "Save search",
+  "PF2ERB.Advanced.SavePrompt": "Give this saved search a name:",
+  "PF2ERB.Advanced.SavedNotification": "Search saved as a bookmark."
 }

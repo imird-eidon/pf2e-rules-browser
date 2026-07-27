@@ -123,6 +123,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleFilter: RulesBrowser.#onToggleFilter,
       advancedSearch: RulesBrowser.#onAdvancedSearch,
       clearFacets: RulesBrowser.#onClearFacets,
+      saveSearch: RulesBrowser.#onSaveSearch,
       openPalette: RulesBrowser.#onOpenPalette
     }
   };
@@ -265,7 +266,9 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       tab.label = game.i18n.localize("PF2ERB.Home");
       tab.icon = "fa-solid fa-house";
     } else if (view.advanced) {
-      tab.label = game.i18n.localize("PF2ERB.Advanced.Title");
+      tab.label = view.facets
+        ? this.#describeFacets(view.facets)
+        : game.i18n.localize("PF2ERB.Advanced.Title");
       tab.icon = "fa-solid fa-sliders";
     } else if (view.world) {
       tab.label = game.i18n.localize("PF2ERB.WorldJournals");
@@ -392,10 +395,19 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
    * pack it came from), so checking pack first would send every one of them
    * to the pack's full listing instead of the document itself.
    */
-  static #descriptorFromDataset({ uuid, pack, view, hash } = {}) {
+  static #descriptorFromDataset({ uuid, pack, view, hash, facets } = {}) {
     if (uuid) return { uuid, hash: hash ?? null };
     if (pack) return { pack };
     if (view === "world") return { world: true };
+    if (view === "advanced") {
+      let parsed;
+      try {
+        parsed = facets ? JSON.parse(facets) : undefined;
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Failed to parse saved search facets`, err);
+      }
+      return { advanced: true, facets: parsed };
+    }
     return null;
   }
 
@@ -661,6 +673,62 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.render({ parts: ["sidebar", "content"] });
   }
 
+  /** Build a readable default name from the active facets, e.g.
+   *  "Manipulate, Secret · lvl ≤4" — used to pre-fill the save dialog. */
+  #describeFacets(facets) {
+    const parts = [];
+    if (facets.traits.length) {
+      parts.push(facets.traits.map((t) => this.#localizeTraitSlug(t)).join(", "));
+    }
+    if (facets.type) parts.push(game.i18n.localize(`TYPES.Item.${facets.type}`) || facets.type);
+    if (facets.levelMin !== null || facets.levelMax !== null) {
+      const min = facets.levelMin ?? "0";
+      const max = facets.levelMax ?? "∞";
+      parts.push(`lvl ${min}–${max}`);
+    }
+    if (facets.rarity) {
+      parts.push(game.i18n.localize(CONFIG.PF2E?.rarityTraits?.[facets.rarity] ?? facets.rarity));
+    }
+    if (facets.text) parts.push(`"${facets.text}"`);
+    return parts.join(" · ") || game.i18n.localize("PF2ERB.Advanced.Title");
+  }
+
+  /** Prompt for a name and save the current advanced-search facets as a
+   *  bookmark. Unlike the toolbar star (which toggles a single document
+   *  bookmark on/off), this always creates a new, independently-named
+   *  preset — there's no natural single "identity" for a facet
+   *  combination to toggle against. */
+  static async #onSaveSearch() {
+    const DialogV2 = foundry.applications.api.DialogV2;
+    const suggested = this.#describeFacets(this.#facets);
+
+    const name = await DialogV2.prompt({
+      window: { title: game.i18n.localize("PF2ERB.Advanced.SaveDialogTitle") },
+      content: `
+        <p>${game.i18n.localize("PF2ERB.Advanced.SavePrompt")}</p>
+        <input type="text" name="name" value="${suggested.replace(/"/g, "&quot;")}" autocomplete="off">
+      `,
+      ok: {
+        label: game.i18n.localize("PF2ERB.Folder.Save"),
+        callback: (_event, button) => button.form.elements.name.value.trim()
+      },
+      rejectClose: false
+    });
+    if (!name) return;
+
+    const bookmarks = this.getBookmarks();
+    bookmarks.push({
+      key: `search:${foundry.utils.randomID()}`,
+      view: { advanced: true, facets: foundry.utils.deepClone(this.#facets) },
+      label: name,
+      icon: "fa-solid fa-sliders",
+      folder: null
+    });
+    await game.user.setFlag(MODULE_ID, "bookmarks", bookmarks);
+    await this.render({ parts: ["sidebar"] });
+    ui.notifications.info(game.i18n.localize("PF2ERB.Advanced.SavedNotification"));
+  }
+
   /** Read every facet control's current value straight from the DOM (the
    *  DOM is the source of truth while the panel is open), store it, and
    *  re-render only the results — so text inputs keep focus and caret. */
@@ -795,7 +863,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     const view = this.currentView;
     this.#currentItemForRoll = null;
     if (view.home) await this.#prepareHome(context, tab);
-    else if (view.advanced) await this.#prepareAdvanced(context, tab);
+    else if (view.advanced) await this.#prepareAdvanced(context, tab, view);
     else if (view.world) await this.#prepareWorld(context, tab);
     else if (view.pack) await this.#preparePack(context, tab, view.pack);
     else if (view.uuid) await this.#prepareDocument(context, tab, view);
@@ -939,6 +1007,8 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         icon: b.icon,
         uuid: b.view.uuid,
         pack: b.view.pack,
+        view: b.view.advanced ? "advanced" : undefined,
+        facetsJson: b.view.advanced ? JSON.stringify(b.view.facets) : undefined,
         removeKey: b.key,
         folderKey: b.key
       });
@@ -1171,7 +1241,12 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  async #prepareAdvanced(context, tab) {
+  async #prepareAdvanced(context, tab, view = {}) {
+    // A saved-search bookmark carries its own facets — load them as the
+    // current editing state. Navigating to the plain "Advanced Search"
+    // button (no facets attached) keeps whatever was already being edited.
+    if (view.facets) this.#facets = foundry.utils.deepClone(view.facets);
+
     const [options, { total, results, limit }] = await Promise.all([
       this.index.facetOptions(),
       this.index.searchAdvanced(this.#facets)
@@ -1223,6 +1298,9 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
           icon: SearchIndex.ICONS[e.type] ?? SearchIndex.ICONS.default,
           typeLabel: game.i18n.localize(`TYPES.Item.${e.type}`) || e.type,
           publication: e.publication,
+          rarity: e.rarity
+            ? game.i18n.localize(CONFIG.PF2E?.rarityTraits?.[e.rarity] ?? e.rarity)
+            : null,
           traits: e.traits.map((slug) => this.#localizeTraitSlug(slug))
         }))
       }
@@ -1350,7 +1428,7 @@ export class RulesBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
         subtitle: game.i18n.localize(`TYPES.Item.${item.type}`) ?? item.type,
         img: item.img,
         level: sys.level?.value,
-        rarity: sys.traits?.rarity && sys.traits.rarity !== "common"
+        rarity: sys.traits?.rarity
           ? game.i18n.localize(CONFIG.PF2E?.rarityTraits?.[sys.traits.rarity] ?? sys.traits.rarity)
           : null,
         traits,
